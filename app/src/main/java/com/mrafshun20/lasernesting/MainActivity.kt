@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -66,6 +67,14 @@ class MainActivity : AppCompatActivity() {
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+                            },
+                            actions = {
+                                IconButton(onClick = { selectedTab = 2 }) {
+                                    Icon(
+                                        Icons.Filled.Settings,
+                                        contentDescription = stringResource(R.string.action_settings)
+                                    )
+                                }
                             }
                         )
                     },
@@ -82,14 +91,6 @@ class MainActivity : AppCompatActivity() {
                             NavigationBarItem(
                                 selected = selectedTab == 1,
                                 onClick = { selectedTab = 1 },
-                                icon = {
-                                    Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.tab_setup))
-                                },
-                                label = { Text(stringResource(R.string.tab_setup)) }
-                            )
-                            NavigationBarItem(
-                                selected = selectedTab == 2,
-                                onClick = { selectedTab = 2 },
                                 icon = {
                                     Icon(Icons.Filled.GridView, contentDescription = stringResource(R.string.tab_nest))
                                 },
@@ -109,8 +110,8 @@ class MainActivity : AppCompatActivity() {
                         ) { tab ->
                             when (tab) {
                                 0 -> PartsScreen(viewModel)
-                                1 -> SetupScreen(viewModel)
-                                2 -> ResultsScreen(viewModel)
+                                1 -> ResultsScreen(viewModel)
+                                else -> SetupScreen(viewModel)
                             }
                         }
                     }

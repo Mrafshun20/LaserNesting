@@ -5,6 +5,8 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,18 +29,25 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -181,7 +190,11 @@ fun PartsScreen(viewModel: NestingViewModel) {
                         part = part,
                         color = partColor(index),
                         onEdit = { editingPart = part },
-                        onDelete = { viewModel.deletePart(part) }
+                        onDelete = { viewModel.deletePart(part) },
+                        onQuantityChange = { quantity ->
+                            viewModel.setPartQuantity(part, quantity)
+                        },
+                        onDuplicate = { viewModel.duplicatePart(part) }
                     )
                 }
             }
@@ -230,8 +243,11 @@ private fun PartRow(
     part: PartEntity,
     color: Color,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onQuantityChange: (Int) -> Unit,
+    onDuplicate: () -> Unit
 ) {
+    val materialName = part.material.localizedName()
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -240,49 +256,91 @@ private fun PartRow(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(14.dp)
-                    .background(color, CircleShape)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(part.name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = partDescription(part),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .background(color, CircleShape)
                 )
-                val holes = part.outline?.holes?.size ?: 0
-                val details = buildString {
-                    append("${part.quantity}x  •  ${part.material.displayName} ")
-                    append("${formatMm(part.thicknessMm)} mm")
-                    if (holes > 0) append("  •  ${stringResource(R.string.part_holes, holes)}")
-                    if (part.shape == PartShape.DXF && part.sourceFile != null) {
-                        append("  •  ${part.sourceFile}")
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(part.name, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = partDescription(part),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    val holes = part.outline?.holes?.size ?: 0
+                    val details = buildString {
+                        append("${part.quantity}x  •  $materialName ")
+                        append("${formatMm(part.thicknessMm)} mm")
+                        if (holes > 0) append("  •  ${stringResource(R.string.part_holes, holes)}")
+                        if (part.shape == PartShape.DXF && part.sourceFile != null) {
+                            append("  •  ${part.sourceFile}")
+                        }
+                        if (part.priority > 0) append("  •  P${part.priority}")
+                        if (part.allowRotation) {
+                            append("  •  ${stringResource(R.string.part_rotation_allowed)}")
+                        }
                     }
-                    if (part.priority > 0) append("  •  P${part.priority}")
-                    if (part.allowRotation) {
-                        append("  •  ${stringResource(R.string.part_rotation_allowed)}")
-                    }
+                    Text(
+                        text = details,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.dialog_edit_part))
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.part_delete))
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { onQuantityChange(part.quantity - 1) },
+                    enabled = part.quantity > 1
+                ) {
+                    Icon(
+                        Icons.Filled.Remove,
+                        contentDescription = stringResource(R.string.part_quantity_decrease)
+                    )
                 }
                 Text(
-                    text = details,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "${part.quantity}",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .clickable { onEdit() }
+                        .padding(horizontal = 6.dp)
                 )
-            }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.dialog_edit_part))
-            }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = null)
+                IconButton(onClick = { onQuantityChange(part.quantity + 1) }) {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = stringResource(R.string.part_quantity_increase)
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(onClick = onDuplicate) {
+                    Icon(
+                        Icons.Filled.ContentCopy,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringResource(R.string.part_duplicate), maxLines = 1)
+                }
             }
         }
     }
@@ -303,6 +361,7 @@ private fun partDescription(part: PartEntity): String {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PartEditorDialog(
     part: PartEntity?,
@@ -321,15 +380,17 @@ private fun PartEditorDialog(
     var rotations by remember {
         mutableStateOf(part?.allowedRotations ?: setOf(0, 90, 180, 270))
     }
+    var materialMenuExpanded by remember { mutableStateOf(false) }
 
     // DXF parts keep their true outline; the editor only changes quantity,
     // priority and rotations for them (size comes from the DXF file).
     val isDxf = part?.shape == PartShape.DXF
-    val width = widthText.toDoubleOrNull()
-    val height = if (shape == PartShape.CIRCLE) width else heightText.toDoubleOrNull()
-    val quantity = quantityText.toIntOrNull()
-    val thickness = thicknessText.toDoubleOrNull()
-    val priority = priorityText.toIntOrNull() ?: 0
+    // Numeric fields accept Persian/Arabic digits too ("۱۰" parses as 10).
+    val width = parseDouble(widthText)
+    val height = if (shape == PartShape.CIRCLE) width else parseDouble(heightText)
+    val quantity = parseInt(quantityText)
+    val thickness = parseDouble(thicknessText)
+    val priority = parseInt(priorityText) ?: 0
     val valid = name.isNotBlank() &&
         width != null && width > 0 &&
         height != null && height > 0 &&
@@ -360,16 +421,19 @@ private fun PartEditorDialog(
                 )
 
                 if (!isDxf) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         FilterChip(
                             selected = shape == PartShape.RECTANGLE,
                             onClick = { shape = PartShape.RECTANGLE },
-                            label = { Text(stringResource(R.string.part_shape_rectangle)) }
+                            label = { Text(stringResource(R.string.part_shape_rectangle), maxLines = 1) }
                         )
                         FilterChip(
                             selected = shape == PartShape.CIRCLE,
                             onClick = { shape = PartShape.CIRCLE },
-                            label = { Text(stringResource(R.string.part_shape_circle)) }
+                            label = { Text(stringResource(R.string.part_shape_circle), maxLines = 1) }
                         )
                     }
 
@@ -425,13 +489,41 @@ private fun PartEditorDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Material.entries.forEach { entry ->
-                        FilterChip(
-                            selected = material == entry,
-                            onClick = { material = entry },
-                            label = { Text(entry.displayName) }
-                        )
+                // Material as a dropdown: a full-width field whose options
+                // are full-width single-line rows, so a long name can never
+                // be squeezed into a narrow column (no vertical stacking).
+                ExposedDropdownMenuBox(
+                    expanded = materialMenuExpanded,
+                    onExpandedChange = { materialMenuExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = material.localizedName(),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.field_material)) },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(
+                                expanded = materialMenuExpanded
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = materialMenuExpanded,
+                        onDismissRequest = { materialMenuExpanded = false }
+                    ) {
+                        Material.entries.forEach { entry ->
+                            DropdownMenuItem(
+                                text = { Text(entry.localizedName(), maxLines = 1) },
+                                onClick = {
+                                    material = entry
+                                    materialMenuExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
 
@@ -471,7 +563,10 @@ private fun PartEditorDialog(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         listOf(0, 90, 180, 270).forEach { angle ->
                             FilterChip(
                                 selected = angle in rotations,
@@ -482,7 +577,7 @@ private fun PartEditorDialog(
                                         rotations + angle
                                     }
                                 },
-                                label = { Text("$angle°") }
+                                label = { Text("$angle°", maxLines = 1) }
                             )
                         }
                     }

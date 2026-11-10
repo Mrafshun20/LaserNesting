@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.mrafshun20.lasernesting.R
 import com.mrafshun20.lasernesting.data.AppDatabase
 import com.mrafshun20.lasernesting.data.Material
 import com.mrafshun20.lasernesting.data.NestingRepository
@@ -56,6 +57,21 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch(Dispatchers.IO) { repository.upsertPart(part) }
     }
 
+    /** Changes a part's quantity right from its list row (minimum 1). */
+    fun setPartQuantity(part: PartEntity, quantity: Int) {
+        val clamped = quantity.coerceAtLeast(1)
+        if (clamped == part.quantity) return
+        upsertPart(part.copy(quantity = clamped))
+    }
+
+    /** Duplicates a part under a new id, with a localised "(copy)" name. */
+    fun duplicatePart(part: PartEntity) {
+        val copyName = getApplication<Application>().getString(
+            R.string.part_copy_name, part.name
+        )
+        upsertPart(part.copy(id = 0, name = copyName))
+    }
+
     fun deletePart(part: PartEntity) {
         viewModelScope.launch(Dispatchers.IO) { repository.deletePart(part) }
     }
@@ -99,14 +115,15 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
             val result = withContext(Dispatchers.IO) {
                 runCatching { DxfParser.parse(dxfText) }.getOrNull()
             }
+            val app = getApplication<Application>()
             if (result == null) {
-                dxfImportMessage = "Could not read this DXF file."
+                dxfImportMessage = app.getString(R.string.dxf_read_error)
                 return@launch
             }
             if (result.parts.isEmpty()) {
                 val warning = result.warnings.firstOrNull()
                 dxfImportMessage = warning
-                    ?: "No closed parts were found in this DXF file."
+                    ?: app.getString(R.string.dxf_no_parts)
                 return@launch
             }
             val entities = result.parts.map { dxfPart ->
@@ -129,9 +146,10 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
                 repository.insertParts(entities).size
             }
             dxfImportMessage = if (result.warnings.isEmpty()) {
-                "Imported $imported part(s) from $fileName."
+                app.getString(R.string.dxf_imported, imported, fileName)
             } else {
-                "Imported $imported part(s) from $fileName. ${result.warnings.first()}"
+                app.getString(R.string.dxf_imported, imported, fileName) +
+                    " ${result.warnings.first()}"
             }
         }
     }
@@ -147,19 +165,23 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
             val currentParts = withContext(Dispatchers.IO) { repository.getParts() }
             val s = withContext(Dispatchers.IO) { repository.getSettings() }
             val machine = s.machinePreset
-
+            val app = getApplication<Application>()
             val error: String? = when {
                 currentParts.isEmpty() ->
-                    "Add at least one part first."
+                    app.getString(R.string.nest_no_parts)
                 s.sheetWidthMm <= 0 || s.sheetLengthMm <= 0 ->
-                    "Sheet size must be greater than zero."
+                    app.getString(R.string.nest_sheet_zero)
                 s.sheetCount < 1 ->
-                    "Sheet quantity must be at least 1."
+                    app.getString(R.string.nest_sheet_count_min)
                 s.sheetWidthMm > machine.maxWidthMm || s.sheetLengthMm > machine.maxLengthMm ->
-                    "Sheet (${formatMm(s.sheetWidthMm)} x ${formatMm(s.sheetLengthMm)} mm) is " +
-                        "larger than the ${machine.displayName} working area " +
-                        "(${formatMm(machine.maxWidthMm)} x ${formatMm(machine.maxLengthMm)} mm). " +
-                        "Pick a smaller sheet or another machine."
+                    app.getString(
+                        R.string.nest_sheet_too_big,
+                        formatMm(s.sheetWidthMm),
+                        formatMm(s.sheetLengthMm),
+                        machine.displayName,
+                        formatMm(machine.maxWidthMm),
+                        formatMm(machine.maxLengthMm)
+                    )
                 else -> null
             }
 

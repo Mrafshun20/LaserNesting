@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import java.util.Locale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Download
@@ -157,7 +158,7 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                             modifier = Modifier.weight(1f)
                         )
                         Text(
-                            text = "%.1f%%".format(r.overallUtilizationPercent),
+                            text = "%.1f%%".format(Locale.US, r.overallUtilizationPercent),
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -188,11 +189,15 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                         )
                         MiniStat(
                             label = stringResource(R.string.nest_cut_length),
-                            value = "%.1f m".format(r.totalCutLengthMm / 1000.0)
+                            value = "%.1f m".format(Locale.US, r.totalCutLengthMm / 1000.0)
                         )
                         MiniStat(
                             label = stringResource(R.string.nest_est_time),
-                            value = formatMinutes(r.estimatedCutMinutes)
+                            value = formatMinutes(
+                                r.estimatedCutMinutes,
+                                stringResource(R.string.time_hour),
+                                stringResource(R.string.time_min)
+                            )
                         )
                         MiniStat(
                             label = stringResource(R.string.nest_placed),
@@ -305,7 +310,7 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                             }
                             Text(
                                 text = "• ${unplaced.name} ($dims, ${unplaced.quantity}x) — " +
-                                    unplaced.reason,
+                                    unplaced.reason.localized(),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
@@ -412,11 +417,17 @@ private fun SheetSelectorCard(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "Sheet ${sheet.index + 1}",
+                text = stringResource(
+                    R.string.nest_sheet_card_title,
+                    sheet.index + 1
+                ),
                 style = MaterialTheme.typography.titleSmall
             )
             Text(
-                text = "%.0f%% used".format(sheet.utilizationPercent),
+                text = stringResource(
+                    R.string.nest_sheet_card_used,
+                    sheet.utilizationPercent
+                ),
                 style = MaterialTheme.typography.bodyMedium
             )
             LinearProgressIndicator(

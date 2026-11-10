@@ -103,13 +103,16 @@ fun SetupScreen(viewModel: NestingViewModel) {
                         onClick = {
                             viewModel.updateSettings { it.copy(machinePreset = preset) }
                         },
-                        label = { Text(preset.displayName) }
+                        label = { Text(preset.displayName, maxLines = 1) }
                     )
                 }
             }
             Text(
-                text = "Max working area: ${formatMm(machine.maxWidthMm)} x " +
-                    "${formatMm(machine.maxLengthMm)} mm",
+                text = stringResource(
+                    R.string.setup_max_area,
+                    formatMm(machine.maxWidthMm),
+                    formatMm(machine.maxLengthMm)
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -138,12 +141,12 @@ fun SetupScreen(viewModel: NestingViewModel) {
                                 }
                             }
                         },
-                        label = { Text(preset.displayName) }
+                        label = { Text(preset.localizedName(), maxLines = 1) }
                     )
                 }
             }
             DecimalField(
-                label = "Sheet width",
+                label = stringResource(R.string.setup_sheet_width),
                 value = settings.sheetWidthMm,
                 suffix = "mm",
                 onValueChange = { value ->
@@ -153,7 +156,7 @@ fun SetupScreen(viewModel: NestingViewModel) {
                 }
             )
             DecimalField(
-                label = "Sheet length",
+                label = stringResource(R.string.setup_sheet_length),
                 value = settings.sheetLengthMm,
                 suffix = "mm",
                 onValueChange = { value ->
@@ -180,9 +183,12 @@ fun SetupScreen(viewModel: NestingViewModel) {
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Sheet is larger than the ${machine.displayName} " +
-                                "working area (${formatMm(machine.maxWidthMm)} x " +
-                                "${formatMm(machine.maxLengthMm)} mm).",
+                            text = stringResource(
+                                R.string.setup_sheet_too_big,
+                                machine.displayName,
+                                formatMm(machine.maxWidthMm),
+                                formatMm(machine.maxLengthMm)
+                            ),
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -199,12 +205,12 @@ fun SetupScreen(viewModel: NestingViewModel) {
                         onClick = {
                             viewModel.updateSettings { it.copy(sheetMaterial = entry) }
                         },
-                        label = { Text(entry.displayName) }
+                        label = { Text(entry.localizedName(), maxLines = 1) }
                     )
                 }
             }
             DecimalField(
-                label = "Sheet thickness",
+                label = stringResource(R.string.setup_sheet_thickness),
                 value = settings.sheetThicknessMm,
                 suffix = "mm",
                 onValueChange = { value ->
@@ -212,7 +218,7 @@ fun SetupScreen(viewModel: NestingViewModel) {
                 }
             )
             IntField(
-                label = "Number of sheets",
+                label = stringResource(R.string.setup_sheet_count),
                 value = settings.sheetCount,
                 onValueChange = { value ->
                     viewModel.updateSettings { it.copy(sheetCount = value) }
@@ -222,7 +228,7 @@ fun SetupScreen(viewModel: NestingViewModel) {
 
         SectionCard(icon = Icons.Filled.Dashboard, title = stringResource(R.string.setup_nesting)) {
             DecimalField(
-                label = "Kerf (cut width)",
+                label = stringResource(R.string.setup_kerf),
                 value = settings.kerfMm,
                 suffix = "mm",
                 onValueChange = { value ->
@@ -230,7 +236,7 @@ fun SetupScreen(viewModel: NestingViewModel) {
                 }
             )
             DecimalField(
-                label = "Part-to-part gap",
+                label = stringResource(R.string.setup_gap),
                 value = settings.gapMm,
                 suffix = "mm",
                 onValueChange = { value ->
@@ -238,7 +244,7 @@ fun SetupScreen(viewModel: NestingViewModel) {
                 }
             )
             DecimalField(
-                label = "Sheet edge margin",
+                label = stringResource(R.string.setup_margin),
                 value = settings.marginMm,
                 suffix = "mm",
                 onValueChange = { value ->
@@ -247,7 +253,7 @@ fun SetupScreen(viewModel: NestingViewModel) {
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Allow 90° rotation",
+                    text = stringResource(R.string.setup_allow_rotation),
                     modifier = Modifier.weight(1f)
                 )
                 Switch(
@@ -261,7 +267,7 @@ fun SetupScreen(viewModel: NestingViewModel) {
 
         SectionCard(icon = Icons.Filled.Speed, title = stringResource(R.string.setup_cutting)) {
             DecimalField(
-                label = "Cutting speed",
+                label = stringResource(R.string.setup_cutting_speed),
                 value = settings.cuttingSpeedMmPerMin,
                 suffix = "mm/min",
                 onValueChange = { value ->
@@ -269,7 +275,7 @@ fun SetupScreen(viewModel: NestingViewModel) {
                 }
             )
             Text(
-                text = "Cutting time is a rough estimate: total cut length divided by speed.",
+                text = stringResource(R.string.setup_cutting_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

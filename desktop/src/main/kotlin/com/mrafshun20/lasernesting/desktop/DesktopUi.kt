@@ -70,6 +70,7 @@ import com.mrafshun20.lasernesting.nesting.NestSheet
 import com.mrafshun20.lasernesting.nesting.NestingEngine
 import com.mrafshun20.lasernesting.nesting.PartInput
 import com.mrafshun20.lasernesting.nesting.PlacedPart
+import com.mrafshun20.lasernesting.nesting.UnplacedReason
 import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
@@ -887,11 +888,17 @@ private fun DesktopNestScreen(state: DesktopState) {
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                         r.unplaced.forEach { unplaced ->
+                            val reasonKey = when (unplaced.reason) {
+                                UnplacedReason.INVALID -> "reason_invalid"
+                                UnplacedReason.NO_USABLE_AREA -> "reason_no_area"
+                                UnplacedReason.NO_FREE_SPACE -> "reason_no_space"
+                                UnplacedReason.DOES_NOT_FIT -> "reason_no_fit"
+                            }
                             Text(
                                 text = "• ${unplaced.name} " +
                                     "(${formatMm(unplaced.widthMm)} x " +
                                     "${formatMm(unplaced.heightMm)} mm, " +
-                                    "${unplaced.quantity}x) — ${unplaced.reason}",
+                                    "${unplaced.quantity}x) — ${state.t(reasonKey)}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )

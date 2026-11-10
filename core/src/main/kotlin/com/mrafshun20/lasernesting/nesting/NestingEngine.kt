@@ -61,6 +61,14 @@ data class NestSheet(
     val remnant: Remnant? = null
 )
 
+/** Why a part could not be placed. */
+enum class UnplacedReason {
+    INVALID,
+    NO_USABLE_AREA,
+    NO_FREE_SPACE,
+    DOES_NOT_FIT
+}
+
 /** A part type that could not be placed, grouped with a reason. */
 data class UnplacedPart(
     val name: String,
@@ -68,7 +76,7 @@ data class UnplacedPart(
     val widthMm: Double,
     val heightMm: Double,
     val quantity: Int,
-    val reason: String
+    val reason: UnplacedReason
 )
 
 /** Full result of one nesting run. */
@@ -140,7 +148,7 @@ object NestingEngine {
                     widthMm = part.widthMm,
                     heightMm = part.heightMm,
                     quantity = part.quantity.coerceAtLeast(0),
-                    reason = "Invalid size or quantity"
+                    reason = UnplacedReason.INVALID
                 )
             )
         }
@@ -155,7 +163,7 @@ object NestingEngine {
                         widthMm = part.widthMm,
                         heightMm = part.heightMm,
                         quantity = part.quantity,
-                        reason = "No usable area — reduce the edge margin"
+                        reason = UnplacedReason.NO_USABLE_AREA
                     )
                 )
             }
@@ -241,9 +249,9 @@ object NestingEngine {
                         heightMm = part.heightMm,
                         quantity = missing,
                         reason = if (fitsEmptySheet) {
-                            "No free space left on the available sheets"
+                            UnplacedReason.NO_FREE_SPACE
                         } else {
-                            "Does not fit the sheet"
+                            UnplacedReason.DOES_NOT_FIT
                         }
                     )
                 )

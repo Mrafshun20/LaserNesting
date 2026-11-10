@@ -21,11 +21,25 @@
     <string name="part_shape_circle">دایره</string>
     <string name="part_shape_dxf">خط DXF</string>
 
+    <string name="material_mild_steel">فولاد نرم</string>
+    <string name="material_stainless_steel">فولاد ضدزنگ</string>
+    <string name="material_aluminium">آلومینیوم</string>
+    <string name="sheet_preset_custom">سفارشی</string>
+    <string name="part_copy_name">%1$s (کپی)</string>
+    <string name="part_quantity_decrease">کم کردن تعداد</string>
+    <string name="part_quantity_increase">زیاد کردن تعداد</string>
+    <string name="part_duplicate">کپی کردن قطعه</string>
+    <string name="part_delete">حذف قطعه</string>
+    <string name="action_settings">تنظیمات</string>
+    <string name="time_hour">ساعت</string>
+    <string name="time_min">دقیقه</string>
+
     <string name="dialog_add_part">افزودن قطعه</string>
     <string name="dialog_edit_part">ویرایش قطعه</string>
     <string name="dialog_save">ذخیره</string>
     <string name="dialog_cancel">لغو</string>
     <string name="field_name">نام</string>
+    <string name="field_material">جنس</string>
     <string name="field_width">عرض (میلی‌متر)</string>
     <string name="field_height">ارتفاع (میلی‌متر)</string>
     <string name="field_diameter">قطر (میلی‌متر)</string>
@@ -67,6 +81,12 @@
     <string name="nest_sheet_used">ورق %1$d — %2$.1f٪ استفاده شده</string>
     <string name="nest_sheet_summary">ورق %1$s در %2$s میلی‌متر  •  حاشیه %3$s میلی‌متر  •  کرف %4$s میلی‌متر + فاصله %5$s میلی‌متر</string>
     <string name="nest_unplaced">قطعات چیده‌نشده (%1$d)</string>
+    <string name="nest_unplaced_invalid">اندازه یا تعداد نامعتبر است</string>
+    <string name="nest_unplaced_no_area">ناحیه قابل‌استفاده‌ای نیست — حاشیه لبه را کم کنید</string>
+    <string name="nest_unplaced_no_space">در ورق‌های موجود جای خالی نمانده است</string>
+    <string name="nest_unplaced_no_fit">در ورق جا نمی‌شود</string>
+    <string name="nest_sheet_card_title">ورق %1$d</string>
+    <string name="nest_sheet_card_used">%1$.0f٪ استفاده شده</string>
     <string name="nest_remnant">باقیمانده %1$s در %2$s میلی‌متر</string>
     <string name="nest_export_csv">لیست برش (CSV)</string>
     <string name="nest_export_svg">نقشه چیدمان (SVG)</string>

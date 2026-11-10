@@ -12,6 +12,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import com.mrafshun20.lasernesting.ui.parseDouble
+import com.mrafshun20.lasernesting.ui.parseInt
 
 /**
  * A decimal number field bound to an external value. It keeps its own text
@@ -29,7 +31,7 @@ fun DecimalField(
     var text by remember { mutableStateOf(formatNumber(value)) }
 
     LaunchedEffect(value) {
-        val parsed = text.toDoubleOrNull()
+        val parsed = parseDouble(text)
         if (parsed == null || parsed != value) {
             text = formatNumber(value)
         }
@@ -39,7 +41,7 @@ fun DecimalField(
         value = text,
         onValueChange = { newText ->
             text = newText
-            newText.toDoubleOrNull()?.let { onValueChange(it) }
+            parseDouble(newText)?.let { onValueChange(it) }
         },
         label = { Text(label) },
         suffix = if (suffix.isNotEmpty()) {
@@ -65,7 +67,7 @@ fun IntField(
     var text by remember { mutableStateOf(value.toString()) }
 
     LaunchedEffect(value) {
-        val parsed = text.toIntOrNull()
+        val parsed = parseInt(text)
         if (parsed == null || parsed != value) {
             text = value.toString()
         }
@@ -75,7 +77,7 @@ fun IntField(
         value = text,
         onValueChange = { newText ->
             text = newText
-            newText.toIntOrNull()?.let { onValueChange(it) }
+            parseInt(newText)?.let { onValueChange(it) }
         },
         label = { Text(label) },
         suffix = if (suffix.isNotEmpty()) {
