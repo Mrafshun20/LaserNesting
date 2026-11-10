@@ -125,11 +125,13 @@ fun SetupScreen(viewModel: NestingViewModel) {
                         selected = settings.sheetPreset == preset,
                         onClick = {
                             viewModel.updateSettings { current ->
-                                if (preset.widthMm != null && preset.lengthMm != null) {
+                                val w = preset.widthMm
+                                val l = preset.lengthMm
+                                if (w != null && l != null) {
                                     current.copy(
                                         sheetPreset = preset,
-                                        sheetWidthMm = preset.widthMm,
-                                        sheetLengthMm = preset.lengthMm
+                                        sheetWidthMm = w,
+                                        sheetLengthMm = l
                                     )
                                 } else {
                                     current.copy(sheetPreset = preset)

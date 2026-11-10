@@ -53,7 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.drawText
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
@@ -588,11 +588,13 @@ private fun DesktopSetupScreen(state: DesktopState) {
                         selected = settings.sheetPreset == preset,
                         onClick = {
                             state.updateSettings { current ->
-                                if (preset.widthMm != null && preset.lengthMm != null) {
+                                val w = preset.widthMm
+                                val l = preset.lengthMm
+                                if (w != null && l != null) {
                                     current.copy(
                                         sheetPreset = preset,
-                                        sheetWidthMm = preset.widthMm,
-                                        sheetLengthMm = preset.lengthMm
+                                        sheetWidthMm = w,
+                                        sheetLengthMm = l
                                     )
                                 } else {
                                     current.copy(sheetPreset = preset)
