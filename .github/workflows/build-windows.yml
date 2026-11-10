@@ -30,9 +30,10 @@ jobs:
       - name: Zip the runnable distribution
         shell: pwsh
         run: |
-          $app = "desktop/build/compose/binaries/main/app/LaserNesting"
-          if (-not (Test-Path $app)) { Write-Error "Distribution folder not found: $app"; exit 1 }
-          Compress-Archive -Path "$app/*" -DestinationPath "LaserNesting-windows.zip" -Force
+          $appDir = "desktop/build/compose/binaries/main/app"
+          $app = Get-ChildItem -Path $appDir -Directory | Select-Object -First 1
+          if (-not $app) { Write-Error "No distribution folder found in $appDir"; exit 1 }
+          Compress-Archive -Path "$($app.FullName)/*" -DestinationPath "LaserNesting-windows.zip" -Force
 
       - name: Upload Windows distribution (zip)
         uses: actions/upload-artifact@v4
