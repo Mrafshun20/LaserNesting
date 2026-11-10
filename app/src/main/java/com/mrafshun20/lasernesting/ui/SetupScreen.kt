@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material.icons.filled.Speed
@@ -32,7 +33,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.mrafshun20.lasernesting.R
 import com.mrafshun20.lasernesting.data.MachinePreset
 import com.mrafshun20.lasernesting.data.Material
 import com.mrafshun20.lasernesting.data.SheetPreset
@@ -60,7 +63,36 @@ fun SetupScreen(viewModel: NestingViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        SectionCard(icon = Icons.Filled.PrecisionManufacturing, title = "Machine") {
+        SectionCard(
+            icon = Icons.Filled.Language,
+            title = stringResource(R.string.setup_language)
+        ) {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = settings.language == "system",
+                    onClick = { viewModel.setLanguage("system") },
+                    label = { Text(stringResource(R.string.setup_language_system)) }
+                )
+                FilterChip(
+                    selected = settings.language == "en",
+                    onClick = { viewModel.setLanguage("en") },
+                    label = { Text(stringResource(R.string.setup_language_en)) }
+                )
+                FilterChip(
+                    selected = settings.language == "fa",
+                    onClick = { viewModel.setLanguage("fa") },
+                    label = { Text(stringResource(R.string.setup_language_fa)) }
+                )
+            }
+        }
+
+        SectionCard(
+            icon = Icons.Filled.PrecisionManufacturing,
+            title = stringResource(R.string.setup_machine)
+        ) {
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -83,7 +115,7 @@ fun SetupScreen(viewModel: NestingViewModel) {
             )
         }
 
-        SectionCard(icon = Icons.Filled.Layers, title = "Sheet") {
+        SectionCard(icon = Icons.Filled.Layers, title = stringResource(R.string.setup_sheet)) {
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -186,7 +218,7 @@ fun SetupScreen(viewModel: NestingViewModel) {
             )
         }
 
-        SectionCard(icon = Icons.Filled.Dashboard, title = "Nesting") {
+        SectionCard(icon = Icons.Filled.Dashboard, title = stringResource(R.string.setup_nesting)) {
             DecimalField(
                 label = "Kerf (cut width)",
                 value = settings.kerfMm,
@@ -225,7 +257,7 @@ fun SetupScreen(viewModel: NestingViewModel) {
             }
         }
 
-        SectionCard(icon = Icons.Filled.Speed, title = "Cutting") {
+        SectionCard(icon = Icons.Filled.Speed, title = stringResource(R.string.setup_cutting)) {
             DecimalField(
                 label = "Cutting speed",
                 value = settings.cuttingSpeedMmPerMin,

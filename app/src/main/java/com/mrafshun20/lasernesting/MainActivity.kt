@@ -1,8 +1,8 @@
 package com.mrafshun20.lasernesting
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -29,15 +29,17 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mrafshun20.lasernesting.R
 import com.mrafshun20.lasernesting.ui.NestingViewModel
 import com.mrafshun20.lasernesting.ui.PartsScreen
 import com.mrafshun20.lasernesting.ui.ResultsScreen
 import com.mrafshun20.lasernesting.ui.SetupScreen
 import com.mrafshun20.lasernesting.ui.theme.LaserNestingTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,11 +57,11 @@ class MainActivity : ComponentActivity() {
                             title = {
                                 Column {
                                     Text(
-                                        text = "Laser Nesting",
+                                        text = stringResource(R.string.app_name),
                                         style = MaterialTheme.typography.titleLarge
                                     )
                                     Text(
-                                        text = "Bystronic sheet nesting",
+                                        text = stringResource(R.string.app_subtitle),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -73,25 +75,25 @@ class MainActivity : ComponentActivity() {
                                 selected = selectedTab == 0,
                                 onClick = { selectedTab = 0 },
                                 icon = {
-                                    Icon(Icons.Filled.List, contentDescription = "Parts")
+                                    Icon(Icons.Filled.List, contentDescription = stringResource(R.string.tab_parts))
                                 },
-                                label = { Text("Parts") }
+                                label = { Text(stringResource(R.string.tab_parts)) }
                             )
                             NavigationBarItem(
                                 selected = selectedTab == 1,
                                 onClick = { selectedTab = 1 },
                                 icon = {
-                                    Icon(Icons.Filled.Settings, contentDescription = "Setup")
+                                    Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.tab_setup))
                                 },
-                                label = { Text("Setup") }
+                                label = { Text(stringResource(R.string.tab_setup)) }
                             )
                             NavigationBarItem(
                                 selected = selectedTab == 2,
                                 onClick = { selectedTab = 2 },
                                 icon = {
-                                    Icon(Icons.Filled.GridView, contentDescription = "Nest")
+                                    Icon(Icons.Filled.GridView, contentDescription = stringResource(R.string.tab_nest))
                                 },
-                                label = { Text("Nest") }
+                                label = { Text(stringResource(R.string.tab_nest)) }
                             )
                         }
                     }

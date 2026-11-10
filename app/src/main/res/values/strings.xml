@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Laser Nesting</string>
+    <string name="app_subtitle">Bystronic sheet nesting</string>
+
+    <string name="tab_parts">Parts</string>
+    <string name="tab_setup">Setup</string>
+    <string name="tab_nest">Nest</string>
+
+    <string name="parts_empty_title">No parts yet</string>
+    <string name="parts_empty_body">Import a DXF file from a customer, or add a simple part by hand. Each closed outline in the DXF becomes one part.</string>
+    <string name="parts_import_dxf">Import DXF</string>
+    <string name="parts_add_first">Add your first part</string>
+    <string name="parts_add_simple">Add simple part</string>
+    <string name="parts_count">%1$d part types  •  %2$d pieces</string>
+    <string name="part_quantity_suffix">x</string>
+    <string name="part_rotation_allowed">rotation allowed</string>
+    <string name="part_holes">%1$d holes</string>
+    <string name="part_from_dxf">DXF</string>
+    <string name="part_shape_rectangle">Rectangle</string>
+    <string name="part_shape_circle">Circle</string>
+    <string name="part_shape_dxf">DXF outline</string>
+
+    <string name="dialog_add_part">Add part</string>
+    <string name="dialog_edit_part">Edit part</string>
+    <string name="dialog_save">Save</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="field_name">Name</string>
+    <string name="field_width">Width (mm)</string>
+    <string name="field_height">Height (mm)</string>
+    <string name="field_diameter">Diameter (mm)</string>
+    <string name="field_quantity">Quantity</string>
+    <string name="field_thickness">Thickness (mm)</string>
+    <string name="field_priority">Priority</string>
+    <string name="field_priority_hint">Higher nests first</string>
+    <string name="field_rotations">Allowed rotations</string>
+
+    <string name="setup_machine">Machine</string>
+    <string name="setup_sheet">Sheet</string>
+    <string name="setup_nesting">Nesting</string>
+    <string name="setup_cutting">Cutting</string>
+    <string name="setup_language">Language</string>
+    <string name="setup_language_system">System default</string>
+    <string name="setup_language_en">English</string>
+    <string name="setup_language_fa">Persian (فارسی)</string>
+    <string name="setup_max_area">Max working area: %1$s x %2$s mm</string>
+    <string name="setup_sheet_too_big">Sheet is larger than the %1$s working area (%2$s x %3$s mm).</string>
+    <string name="setup_sheet_width">Sheet width</string>
+    <string name="setup_sheet_length">Sheet length</string>
+    <string name="setup_sheet_thickness">Sheet thickness</string>
+    <string name="setup_sheet_count">Number of sheets</string>
+    <string name="setup_kerf">Kerf (cut width)</string>
+    <string name="setup_gap">Part-to-part gap</string>
+    <string name="setup_margin">Sheet edge margin</string>
+    <string name="setup_allow_rotation">Allow rotation</string>
+    <string name="setup_cutting_speed">Cutting speed</string>
+    <string name="setup_cutting_note">Cutting time is a rough estimate: total cut length divided by speed.</string>
+
+    <string name="nest_run">Auto-nest parts</string>
+    <string name="nest_running">Nesting…</string>
+    <string name="nest_utilization">Material utilization</string>
+    <string name="nest_waste">Waste: %1$.1f%%  •  %2$.2f m² of %3$.2f m²</string>
+    <string name="nest_sheets">Sheets</string>
+    <string name="nest_cut_length">Cut length</string>
+    <string name="nest_est_time">Est. time</string>
+    <string name="nest_placed">Placed</string>
+    <string name="nest_sheet_used">Sheet %1$d — %2$.1f%% used</string>
+    <string name="nest_sheet_summary">Sheet %1$s x %2$s mm  •  margin %3$s mm  •  kerf %4$s mm + gap %5$s mm</string>
+    <string name="nest_unplaced">Unplaced parts (%1$d)</string>
+    <string name="nest_remnant">Remnant %1$s x %2$s mm</string>
+    <string name="nest_export_csv">Cut list (CSV)</string>
+    <string name="nest_export_svg">Layout (SVG)</string>
+    <string name="nest_share_csv">Share cut list</string>
+    <string name="nest_share_svg">Share nest layout</string>
+    <string name="nest_no_parts">Add at least one part first.</string>
+    <string name="nest_sheet_zero">Sheet size must be greater than zero.</string>
+    <string name="nest_sheet_count_min">Sheet quantity must be at least 1.</string>
+    <string name="nest_sheet_too_big">Sheet (%1$s x %2$s mm) is larger than the %3$s working area (%4$s x %5$s mm). Pick a smaller sheet or another machine.</string>
+
+    <string name="dxf_imported">Imported %1$d part(s) from %2$s.</string>
+    <string name="dxf_no_parts">No closed parts were found in this DXF file.</string>
+    <string name="dxf_read_error">Could not read this DXF file.</string>
+</resources>

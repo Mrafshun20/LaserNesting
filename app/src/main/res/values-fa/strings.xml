@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">چیدمان لیزر</string>
+    <string name="app_subtitle">چیدمان ورق بایسترونیک</string>
+
+    <string name="tab_parts">قطعات</string>
+    <string name="tab_setup">تنظیمات</string>
+    <string name="tab_nest">چیدمان</string>
+
+    <string name="parts_empty_title">هنوز قطعه‌ای نیست</string>
+    <string name="parts_empty_body">یک فایل DXF از مشتری وارد کنید، یا یک قطعه ساده دستی اضافه کنید. هر خط بسته در فایل DXF یک قطعه می‌شود.</string>
+    <string name="parts_import_dxf">وارد کردن DXF</string>
+    <string name="parts_add_first">افزودن اولین قطعه</string>
+    <string name="parts_add_simple">افزودن قطعه ساده</string>
+    <string name="parts_count">%1$d نوع قطعه  •  %2$d عدد</string>
+    <string name="part_quantity_suffix">عدد</string>
+    <string name="part_rotation_allowed">چرخش مجاز است</string>
+    <string name="part_holes">%1$d سوراخ</string>
+    <string name="part_from_dxf">DXF</string>
+    <string name="part_shape_rectangle">مستطیل</string>
+    <string name="part_shape_circle">دایره</string>
+    <string name="part_shape_dxf">خط DXF</string>
+
+    <string name="dialog_add_part">افزودن قطعه</string>
+    <string name="dialog_edit_part">ویرایش قطعه</string>
+    <string name="dialog_save">ذخیره</string>
+    <string name="dialog_cancel">لغو</string>
+    <string name="field_name">نام</string>
+    <string name="field_width">عرض (میلی‌متر)</string>
+    <string name="field_height">ارتفاع (میلی‌متر)</string>
+    <string name="field_diameter">قطر (میلی‌متر)</string>
+    <string name="field_quantity">تعداد</string>
+    <string name="field_thickness">ضخامت (میلی‌متر)</string>
+    <string name="field_priority">اولویت</string>
+    <string name="field_priority_hint">اولویت بالاتر زودتر چیده می‌شود</string>
+    <string name="field_rotations">زاویه‌های چرخش مجاز</string>
+
+    <string name="setup_machine">دستگاه</string>
+    <string name="setup_sheet">ورق</string>
+    <string name="setup_nesting">چیدمان</string>
+    <string name="setup_cutting">برش</string>
+    <string name="setup_language">زبان</string>
+    <string name="setup_language_system">پیش‌فرض دستگاه</string>
+    <string name="setup_language_en">انگلیسی (English)</string>
+    <string name="setup_language_fa">فارسی</string>
+    <string name="setup_max_area">حداکثر ناحیه کاری: %1$s در %2$s میلی‌متر</string>
+    <string name="setup_sheet_too_big">ورق از ناحیه کاری %1$s بزرگ‌تر است (%2$s در %3$s میلی‌متر).</string>
+    <string name="setup_sheet_width">عرض ورق</string>
+    <string name="setup_sheet_length">طول ورق</string>
+    <string name="setup_sheet_thickness">ضخامت ورق</string>
+    <string name="setup_sheet_count">تعداد ورق</string>
+    <string name="setup_kerf">کرف (عرض برش)</string>
+    <string name="setup_gap">فاصله بین قطعات</string>
+    <string name="setup_margin">حاشیه لبه ورق</string>
+    <string name="setup_allow_rotation">اجازه چرخش</string>
+    <string name="setup_cutting_speed">سرعت برش</string>
+    <string name="setup_cutting_note">زمان برش تقریبی است: طول کل برش تقسیم بر سرعت.</string>
+
+    <string name="nest_run">چیدمان خودکار قطعات</string>
+    <string name="nest_running">در حال چیدمان…</string>
+    <string name="nest_utilization">بهره‌وری مواد</string>
+    <string name="nest_waste">پرت: %1$.1f٪  •  %2$.2f متر مربع از %3$.2f متر مربع</string>
+    <string name="nest_sheets">ورق‌ها</string>
+    <string name="nest_cut_length">طول برش</string>
+    <string name="nest_est_time">زمان تقریبی</string>
+    <string name="nest_placed">چیده شده</string>
+    <string name="nest_sheet_used">ورق %1$d — %2$.1f٪ استفاده شده</string>
+    <string name="nest_sheet_summary">ورق %1$s در %2$s میلی‌متر  •  حاشیه %3$s میلی‌متر  •  کرف %4$s میلی‌متر + فاصله %5$s میلی‌متر</string>
+    <string name="nest_unplaced">قطعات چیده‌نشده (%1$d)</string>
+    <string name="nest_remnant">باقیمانده %1$s در %2$s میلی‌متر</string>
+    <string name="nest_export_csv">لیست برش (CSV)</string>
+    <string name="nest_export_svg">نقشه چیدمان (SVG)</string>
+    <string name="nest_share_csv">اشتراک لیست برش</string>
+    <string name="nest_share_svg">اشتراک نقشه چیدمان</string>
+    <string name="nest_no_parts">اول حداقل یک قطعه اضافه کنید.</string>
+    <string name="nest_sheet_zero">اندازه ورق باید بزرگ‌تر از صفر باشد.</string>
+    <string name="nest_sheet_count_min">تعداد ورق باید حداقل ۱ باشد.</string>
+    <string name="nest_sheet_too_big">ورق (%1$s در %2$s میلی‌متر) از ناحیه کاری %3$s بزرگ‌تر است (%4$s در %5$s میلی‌متر). ورق کوچک‌تر یا دستگاه دیگری انتخاب کنید.</string>
+
+    <string name="dxf_imported">%1$d قطعه از %2$s وارد شد.</string>
+    <string name="dxf_no_parts">در این فایل DXF هیچ قطعه بسته‌ای پیدا نشد.</string>
+    <string name="dxf_read_error">خواندن این فایل DXF ممکن نشد.</string>
+</resources>

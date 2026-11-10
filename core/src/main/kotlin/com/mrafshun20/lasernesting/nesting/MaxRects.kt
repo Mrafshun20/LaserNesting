@@ -27,18 +27,28 @@ data class Rect(
  */
 class MaxRectsBin(val width: Double, val height: Double) {
 
-    /** Result of a successful insert. */
-    data class Placement(val rect: Rect, val rotated: Boolean)
+    /** Result of a successful insert, with its best-fit score. */
+    data class Placement(
+        val rect: Rect,
+        val rotated: Boolean,
+        /** Leftover short side of the free rectangle used (smaller is tighter). */
+        val shortSideLeftover: Double = 0.0,
+        /** Leftover long side of the free rectangle used. */
+        val longSideLeftover: Double = 0.0
+    )
 
     val usedRectangles = mutableListOf<Rect>()
     private val freeRectangles = mutableListOf(Rect(0.0, 0.0, width, height))
 
+    /** Snapshot of the current free rectangles (for remnant reporting). */
+    fun freeRectanglesSnapshot(): List<Rect> = freeRectangles.toList()
+
     /**
-     * Tries to place a rectangle of [rectWidth] x [rectHeight].
-     * If [allowRotation] is true the 90-degree rotated orientation is tried too.
-     * Returns null when the rectangle does not fit anywhere.
+     * Finds the best placement for a rectangle of [rectWidth] x [rectHeight]
+     * without committing it. If [allowRotation] is true the 90-degree rotated
+     * orientation is tried too. Returns null when it does not fit anywhere.
      */
-    fun insert(rectWidth: Double, rectHeight: Double, allowRotation: Boolean): Placement? {
+    fun findBest(rectWidth: Double, rectHeight: Double, allowRotation: Boolean): Placement? {
         var bestShortSide = Double.MAX_VALUE
         var bestLongSide = Double.MAX_VALUE
         var bestRect: Rect? = null
@@ -78,11 +88,22 @@ class MaxRectsBin(val width: Double, val height: Double) {
         }
 
         val placed = bestRect ?: return null
-        place(placed)
-        return Placement(placed, bestRotated)
+        return Placement(placed, bestRotated, bestShortSide, bestLongSide)
     }
 
-    private fun place(rect: Rect) {
+    /**
+     * Tries to place a rectangle of [rectWidth] x [rectHeight].
+     * If [allowRotation] is true the 90-degree rotated orientation is tried too.
+     * Returns null when the rectangle does not fit anywhere.
+     */
+    fun insert(rectWidth: Double, rectHeight: Double, allowRotation: Boolean): Placement? {
+        val placement = findBest(rectWidth, rectHeight, allowRotation) ?: return null
+        place(placement.rect)
+        return placement
+    }
+
+    /** Commits a rectangle found by [findBest] into the bin. */
+    fun place(rect: Rect) {
         var i = 0
         while (i < freeRectangles.size) {
             val free = freeRectangles[i]

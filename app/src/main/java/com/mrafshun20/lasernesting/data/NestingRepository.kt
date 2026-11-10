@@ -17,6 +17,8 @@ class NestingRepository(private val db: AppDatabase) {
 
     suspend fun upsertPart(part: PartEntity) = partDao.upsert(part)
 
+    suspend fun insertParts(parts: List<PartEntity>): List<Long> = partDao.insertAll(parts)
+
     suspend fun deletePart(part: PartEntity) = partDao.delete(part)
 
     suspend fun deleteAllParts() = partDao.deleteAll()

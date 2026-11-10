@@ -45,21 +45,26 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.mrafshun20.lasernesting.R
 import com.mrafshun20.lasernesting.data.PartShape
 import com.mrafshun20.lasernesting.export.Export
 import com.mrafshun20.lasernesting.nesting.NestSheet
+import com.mrafshun20.lasernesting.nesting.NestingEngine
+import com.mrafshun20.lasernesting.nesting.PlacedPart
 import com.mrafshun20.lasernesting.ui.theme.SheetBackground
 import com.mrafshun20.lasernesting.ui.theme.partColor
 
 /**
  * Nesting results: auto-nest, utilization and waste summary, per-sheet
- * drawing with a sheet selector, unplaced parts, and CSV / SVG export.
- * Built to read at a glance on a phone, next to the machine.
+ * drawing with a sheet selector, unplaced parts, remnants, and CSV / SVG
+ * export. Built to read at a glance on a phone, next to the machine.
  */
 @Composable
 fun ResultsScreen(viewModel: NestingViewModel) {
@@ -93,7 +98,11 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                 contentDescription = null
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(if (isNesting) "Nesting..." else "Auto-nest parts")
+            Text(
+                stringResource(
+                    if (isNesting) R.string.nest_running else R.string.nest_run
+                )
+            )
         }
 
         if (error != null) {
@@ -143,7 +152,7 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Material utilization",
+                            text = stringResource(R.string.nest_utilization),
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.weight(1f)
                         )
@@ -163,8 +172,8 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                         trackColor = MaterialTheme.colorScheme.surface
                     )
                     Text(
-                        text = "Waste: %.1f%%  •  %.2f m² of %.2f m²".format(
-                            wastePercent, wasteAreaM2, totalSheetAreaM2
+                        text = stringResource(
+                            R.string.nest_waste, wastePercent, wasteAreaM2, totalSheetAreaM2
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -174,19 +183,19 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         MiniStat(
-                            label = "Sheets",
+                            label = stringResource(R.string.nest_sheets),
                             value = "${r.sheetsUsed}"
                         )
                         MiniStat(
-                            label = "Cut length",
+                            label = stringResource(R.string.nest_cut_length),
                             value = "%.1f m".format(r.totalCutLengthMm / 1000.0)
                         )
                         MiniStat(
-                            label = "Est. time",
+                            label = stringResource(R.string.nest_est_time),
                             value = formatMinutes(r.estimatedCutMinutes)
                         )
                         MiniStat(
-                            label = "Placed",
+                            label = stringResource(R.string.nest_placed),
                             value = "${r.totalPartsPlaced}/${r.totalPartsRequested}"
                         )
                     }
@@ -211,8 +220,10 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                 val sheet = r.sheets.firstOrNull { it.index == selectedSheet }
                     ?: r.sheets.first()
                 Text(
-                    text = "Sheet ${sheet.index + 1} — " +
-                        "%.1f%%".format(sheet.utilizationPercent) + " used",
+                    text = stringResource(
+                        R.string.nest_sheet_used,
+                        sheet.index + 1, sheet.utilizationPercent
+                    ),
                     style = MaterialTheme.typography.titleMedium
                 )
                 LinearProgressIndicator(
@@ -232,14 +243,29 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    text = "Sheet ${formatMm(settings.sheetWidthMm)} x " +
-                        "${formatMm(settings.sheetLengthMm)} mm  •  " +
-                        "margin ${formatMm(settings.marginMm)} mm  •  " +
-                        "kerf ${formatMm(settings.kerfMm)} mm + gap " +
-                        "${formatMm(settings.gapMm)} mm",
+                    text = stringResource(
+                        R.string.nest_sheet_summary,
+                        formatMm(settings.sheetWidthMm),
+                        formatMm(settings.sheetLengthMm),
+                        formatMm(settings.marginMm),
+                        formatMm(settings.kerfMm),
+                        formatMm(settings.gapMm)
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                // Remnant: largest leftover rectangle on this sheet.
+                sheet.remnant?.let { remnant ->
+                    Text(
+                        text = stringResource(
+                            R.string.nest_remnant,
+                            formatMm(remnant.widthMm),
+                            formatMm(remnant.heightMm)
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF2E7D32)
+                    )
+                }
             }
 
             // ---- Unplaced parts ----
@@ -262,8 +288,10 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Unplaced parts " +
-                                    "(${r.unplaced.sumOf { it.quantity }})",
+                                text = stringResource(
+                                    R.string.nest_unplaced,
+                                    r.unplaced.sumOf { it.quantity }
+                                ),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
@@ -300,7 +328,7 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                             fileName = "cut-list.csv",
                             mimeType = "text/csv",
                             content = csv,
-                            chooserTitle = "Share cut list"
+                            chooserTitle = context.getString(R.string.nest_share_csv)
                         )
                     },
                     modifier = Modifier.weight(1f)
@@ -310,7 +338,7 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                         contentDescription = null
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Cut list (CSV)")
+                    Text(stringResource(R.string.nest_export_csv))
                 }
                 OutlinedButton(
                     onClick = {
@@ -324,7 +352,7 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                             fileName = "nest-layout.svg",
                             mimeType = "image/svg+xml",
                             content = svg,
-                            chooserTitle = "Share nest layout"
+                            chooserTitle = context.getString(R.string.nest_share_svg)
                         )
                     },
                     modifier = Modifier.weight(1f)
@@ -334,7 +362,7 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                         contentDescription = null
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Layout (SVG)")
+                    Text(stringResource(R.string.nest_export_svg))
                 }
             }
         }
@@ -407,7 +435,13 @@ private fun SheetSelectorCard(
 /**
  * Draws one sheet to scale with its parts, colour-coded and labelled.
  * A light grid (every 500 mm) and the edge-margin boundary are drawn
- * so the layout reads like the machine bed.
+ * so the layout reads like the machine bed. DXF parts are drawn as their
+ * true outline (with holes); rectangles and circles keep their shape.
+ *
+ * Labels are a single line — part name plus dimensions, never the
+ * material name — measured to fit inside the part. A part too small to
+ * hold its label legibly gets no label, so text never overflows the part
+ * bounds and never stacks vertically.
  */
 @Composable
 private fun SheetCanvas(
@@ -467,22 +501,75 @@ private fun SheetCanvas(
         }
 
         for (part in sheet.placed) {
-            val color = partColor(part.colorIndex)
-            val left = (part.xMm * scale).toFloat()
-            val top = (part.yMm * scale).toFloat()
-            val width = (part.widthMm * scale).toFloat()
-            val height = (part.heightMm * scale).toFloat()
+            drawPart(part, scale)
+        }
 
-            if (part.shape == PartShape.CIRCLE) {
-                val center = Offset(left + width / 2f, top + height / 2f)
-                drawCircle(color = color, radius = width / 2f, center = center)
-                drawCircle(
-                    color = Color.Black,
-                    radius = width / 2f,
-                    center = center,
-                    style = Stroke(width = 1f)
-                )
+        // Remnant: largest leftover rectangle, dashed green outline.
+        sheet.remnant?.let { remnant ->
+            val left = (remnant.xMm * scale).toFloat()
+            val top = (remnant.yMm * scale).toFloat()
+            val width = (remnant.widthMm * scale).toFloat()
+            val height = (remnant.heightMm * scale).toFloat()
+            drawRect(
+                color = Color(0xFF2E7D32),
+                topLeft = Offset(left, top),
+                size = Size(width, height),
+                style = Stroke(width = 2f)
+            )
+        }
+    }
+}
+
+/** Draws one placed part (true shape + single-line fitted label). */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPart(
+    part: PlacedPart,
+    scale: Float
+) {
+    val color = partColor(part.colorIndex)
+    val left = (part.xMm * scale).toFloat()
+    val top = (part.yMm * scale).toFloat()
+    val width = (part.widthMm * scale).toFloat()
+    val height = (part.heightMm * scale).toFloat()
+
+    when (part.shape) {
+        PartShape.CIRCLE -> {
+            val center = Offset(left + width / 2f, top + height / 2f)
+            drawCircle(color = color, radius = width / 2f, center = center)
+            drawCircle(
+                color = Color.Black,
+                radius = width / 2f,
+                center = center,
+                style = Stroke(width = 1f)
+            )
+        }
+        PartShape.DXF -> {
+            val points = NestingEngine.placedOutlinePoints(part)
+            if (points.isNotEmpty()) {
+                val path = Path().apply {
+                    points.forEachIndexed { i, p ->
+                        val x = left + (p.x * scale).toFloat()
+                        val y = top + (p.y * scale).toFloat()
+                        if (i == 0) moveTo(x, y) else lineTo(x, y)
+                    }
+                    close()
+                }
+                drawPath(path = path, color = color)
+                drawPath(path = path, color = Color.Black, style = Stroke(width = 1f))
+                // Holes: sheet-coloured circles with a dark outline.
+                for (hole in NestingEngine.placedHoles(part)) {
+                    val cx = left + (hole.center.x * scale).toFloat()
+                    val cy = top + (hole.center.y * scale).toFloat()
+                    val r = (hole.radius * scale).toFloat()
+                    drawCircle(color = SheetBackground, radius = r, center = Offset(cx, cy))
+                    drawCircle(
+                        color = Color.Black,
+                        radius = r,
+                        center = Offset(cx, cy),
+                        style = Stroke(width = 1f)
+                    )
+                }
             } else {
+                // No outline stored: fall back to the bounding rectangle.
                 drawRect(
                     color = color,
                     topLeft = Offset(left, top),
@@ -495,26 +582,54 @@ private fun SheetCanvas(
                     style = Stroke(width = 1f)
                 )
             }
+        }
+        else -> {
+            drawRect(
+                color = color,
+                topLeft = Offset(left, top),
+                size = Size(width, height)
+            )
+            drawRect(
+                color = Color.Black,
+                topLeft = Offset(left, top),
+                size = Size(width, height),
+                style = Stroke(width = 1f)
+            )
+        }
+    }
 
-            if (width > 70f && height > 28f) {
-                val textSize = (minOf(width, height) * 0.18f).coerceIn(18f, 44f)
-                drawIntoCanvas { canvas ->
-                    val paint = android.graphics.Paint().apply {
-                        this.color = android.graphics.Color.BLACK
-                        this.textSize = textSize
-                        textAlign = android.graphics.Paint.Align.CENTER
-                        isAntiAlias = true
-                    }
-                    val centerX = left + width / 2f
-                    val centerY = top + height / 2f
-                    canvas.nativeCanvas.drawText(part.name, centerX, centerY - 4f, paint)
-                    val dims = if (part.shape == PartShape.CIRCLE) {
-                        "Ø ${formatMm(part.widthMm)}"
-                    } else {
-                        "${formatMm(part.widthMm)} x ${formatMm(part.heightMm)}"
-                    }
-                    canvas.nativeCanvas.drawText(dims, centerX, centerY + textSize, paint)
-                }
+    // ---- Single-line label, fitted to the part ----
+    // Name + dimensions only (never the material name). The text is
+    // measured and shrunk until it fits the part width; if even a small
+    // legible size does not fit, the label is skipped entirely.
+    if (width > 40f && height > 16f) {
+        val dims = if (part.shape == PartShape.CIRCLE) {
+            "Ø ${formatMm(part.widthMm)}"
+        } else {
+            "${formatMm(part.widthMm)} x ${formatMm(part.heightMm)}"
+        }
+        val label = "${part.name} $dims"
+        drawIntoCanvas { canvas ->
+            val paint = android.graphics.Paint().apply {
+                this.color = android.graphics.Color.BLACK
+                textAlign = android.graphics.Paint.Align.CENTER
+                isAntiAlias = true
+            }
+            // Largest size that fits the part width (with a small inset)
+            // and stays within half the part height, capped for legibility.
+            val maxTextWidth = width * 0.92f
+            var textSize = (height * 0.28f).coerceAtMost(44f)
+            paint.textSize = textSize
+            while (textSize > 14f && paint.measureText(label) > maxTextWidth) {
+                textSize *= 0.9f
+                paint.textSize = textSize
+            }
+            if (textSize >= 14f && paint.measureText(label) <= maxTextWidth) {
+                val centerX = left + width / 2f
+                val centerY = top + height / 2f
+                val metrics = paint.fontMetrics
+                val baseline = centerY - (metrics.ascent + metrics.descent) / 2f
+                canvas.nativeCanvas.drawText(label, centerX, baseline, paint)
             }
         }
     }
