@@ -21,7 +21,9 @@ jobs:
 
       - name: Set up Android SDK
         run: |
-          SDKMGR=$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 2 -name sdkmanager -type f | head -1)
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMGR=$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f | head -1)
+          if [ -z "$SDKMGR" ]; then echo "sdkmanager not found under $SDK_ROOT"; exit 1; fi
           yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
           "$SDKMGR" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
