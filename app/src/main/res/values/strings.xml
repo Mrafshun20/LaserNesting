@@ -8,10 +8,8 @@
     <string name="tab_nest">Nest</string>
 
     <string name="parts_empty_title">No parts yet</string>
-    <string name="parts_empty_body">Import a DXF file from a customer, or add a simple part by hand. Each closed outline in the DXF becomes one part.</string>
+    <string name="parts_empty_body">Import a DXF file from a customer. Each closed outline in the DXF becomes one part.</string>
     <string name="parts_import_dxf">Import DXF</string>
-    <string name="parts_add_first">Add your first part</string>
-    <string name="parts_add_simple">Add simple part</string>
     <string name="parts_count">%1$d part types  •  %2$d pieces</string>
     <string name="part_quantity_suffix">x</string>
     <string name="part_rotation_allowed">rotation allowed</string>
@@ -34,7 +32,6 @@
     <string name="time_hour">h</string>
     <string name="time_min">min</string>
 
-    <string name="dialog_add_part">Add part</string>
     <string name="dialog_edit_part">Edit part</string>
     <string name="dialog_save">Save</string>
     <string name="dialog_cancel">Cancel</string>

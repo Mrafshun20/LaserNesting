@@ -4,8 +4,11 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,7 +46,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,12 +63,22 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -74,14 +86,17 @@ import com.mrafshun20.lasernesting.R
 import com.mrafshun20.lasernesting.data.Material
 import com.mrafshun20.lasernesting.data.PartEntity
 import com.mrafshun20.lasernesting.data.PartShape
+import com.mrafshun20.lasernesting.ui.theme.SheetBackground
 import com.mrafshun20.lasernesting.ui.theme.partColor
+import kotlinx.coroutines.delay
 
 /**
- * Parts library — the list of parts to cut, with DXF import, add / edit /
- * delete. The primary way to add parts is a DXF import (one customer file
- * holds several parts); manual rectangle/circle entry is a secondary
- * "add simple part" option. Each part gets a stable colour used on the
- * nest drawing and in exports.
+ * Parts library — the list of parts to cut, with DXF import and edit /
+ * delete. Parts are added ONLY by importing a DXF file from a customer
+ * (one file holds several parts); there is no manual rectangle/circle
+ * entry. Each part gets a stable colour used on the nest drawing and in
+ * exports, and a small preview of its true shape. Quantity can be
+ * changed right on the row, with hold-to-repeat steppers.
  */
 @Composable
 fun PartsScreen(viewModel: NestingViewModel) {
@@ -89,7 +104,6 @@ fun PartsScreen(viewModel: NestingViewModel) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var editingPart by remember { mutableStateOf<PartEntity?>(null) }
-    var showAddDialog by remember { mutableStateOf(false) }
     val totalPieces = parts.sumOf { it.quantity }
 
     val dxfMessage = viewModel.dxfImportMessage
@@ -154,10 +168,6 @@ fun PartsScreen(viewModel: NestingViewModel) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.parts_import_dxf))
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(onClick = { showAddDialog = true }) {
-                    Text(stringResource(R.string.parts_add_simple))
-                }
             }
         } else {
             LazyColumn(
@@ -200,29 +210,9 @@ fun PartsScreen(viewModel: NestingViewModel) {
             }
         }
 
-        FloatingActionButton(
-            onClick = { showAddDialog = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.parts_add_simple))
-        }
-
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
-        )
-    }
-
-    if (showAddDialog) {
-        PartEditorDialog(
-            part = null,
-            onDismiss = { showAddDialog = false },
-            onSave = { part ->
-                viewModel.upsertPart(part)
-                showAddDialog = false
-            }
         )
     }
 
@@ -266,11 +256,7 @@ private fun PartRow(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(14.dp)
-                        .background(color, CircleShape)
-                )
+                PartPreview(part = part, color = color)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(part.name, style = MaterialTheme.typography.titleMedium)
@@ -309,14 +295,12 @@ private fun PartRow(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = { onQuantityChange(part.quantity - 1) },
-                    enabled = part.quantity > 1
+                HoldRepeatButton(
+                    onRepeat = { onQuantityChange(part.quantity - 1) },
+                    enabled = part.quantity > 1,
+                    description = stringResource(R.string.part_quantity_decrease)
                 ) {
-                    Icon(
-                        Icons.Filled.Remove,
-                        contentDescription = stringResource(R.string.part_quantity_decrease)
-                    )
+                    Icon(Icons.Filled.Remove, contentDescription = null)
                 }
                 Text(
                     text = "${part.quantity}",
@@ -325,11 +309,11 @@ private fun PartRow(
                         .clickable { onEdit() }
                         .padding(horizontal = 6.dp)
                 )
-                IconButton(onClick = { onQuantityChange(part.quantity + 1) }) {
-                    Icon(
-                        Icons.Filled.Add,
-                        contentDescription = stringResource(R.string.part_quantity_increase)
-                    )
+                HoldRepeatButton(
+                    onRepeat = { onQuantityChange(part.quantity + 1) },
+                    description = stringResource(R.string.part_quantity_increase)
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 TextButton(onClick = onDuplicate) {
@@ -341,6 +325,160 @@ private fun PartRow(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(stringResource(R.string.part_duplicate), maxLines = 1)
                 }
+            }
+        }
+    }
+}
+
+/**
+ * A round button that fires once on tap and keeps firing while held down:
+ * the first repeat comes after ~400 ms, then every ~80 ms. Releasing
+ * stops it at once. The callback is always the latest one
+ * (rememberUpdatedState), so a hold keeps stepping from the current
+ * quantity instead of repeating a stale value. Used for the part
+ * quantity stepper. A quick tap fires exactly once.
+ */
+@Composable
+private fun HoldRepeatButton(
+    onRepeat: () -> Unit,
+    enabled: Boolean = true,
+    description: String?,
+    content: @Composable () -> Unit
+) {
+    var pressed by remember { mutableStateOf(false) }
+    val latestOnRepeat by rememberUpdatedState(onRepeat)
+    LaunchedEffect(pressed, enabled) {
+        if (!pressed || !enabled) return@LaunchedEffect
+        latestOnRepeat()
+        delay(400)
+        while (true) {
+            latestOnRepeat()
+            delay(80)
+        }
+    }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(
+                if (pressed && enabled) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                } else {
+                    Color.Transparent
+                }
+            )
+            .semantics(mergeDescendants = true) {
+                if (description != null) contentDescription = description
+                role = Role.Button
+            }
+            .pointerInput(enabled) {
+                detectTapGestures(
+                    onPress = {
+                        if (enabled) {
+                            pressed = true
+                            tryAwaitRelease()
+                            pressed = false
+                        }
+                    }
+                )
+            }
+    ) {
+        content()
+    }
+}
+
+/**
+ * Small preview of a part's true shape: the DXF outline (with holes),
+ * a circle, or a rectangle, drawn in the part's colour on a light
+ * sheet-like background, fitted into a 60 dp square while preserving
+ * the part's aspect ratio. Lets the user recognise a part at a glance
+ * instead of by name alone.
+ */
+@Composable
+private fun PartPreview(part: PartEntity, color: Color) {
+    Canvas(
+        modifier = Modifier
+            .size(60.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(SheetBackground)
+            .border(1.dp, Color.Gray, RoundedCornerShape(10.dp))
+    ) {
+        val pad = 6.dp.toPx()
+        val availW = size.width - 2 * pad
+        val availH = size.height - 2 * pad
+        val w = part.widthMm.toFloat()
+        val h = part.heightMm.toFloat()
+        if (w <= 0f || h <= 0f || availW <= 0f || availH <= 0f) return@Canvas
+        val scale = minOf(availW / w, availH / h)
+        val drawW = w * scale
+        val drawH = h * scale
+        val ox = pad + (availW - drawW) / 2f
+        val oy = pad + (availH - drawH) / 2f
+        when (part.shape) {
+            PartShape.CIRCLE -> {
+                val cx = ox + drawW / 2f
+                val cy = oy + drawH / 2f
+                val r = minOf(drawW, drawH) / 2f
+                drawCircle(color = color, radius = r, center = Offset(cx, cy))
+                drawCircle(
+                    color = Color.Black,
+                    radius = r,
+                    center = Offset(cx, cy),
+                    style = Stroke(width = 1f)
+                )
+            }
+            PartShape.DXF -> {
+                val outline = part.outline
+                if (outline != null && outline.points.isNotEmpty()) {
+                    val path = Path().apply {
+                        outline.points.forEachIndexed { i, p ->
+                            val x = ox + (p.x * scale).toFloat()
+                            val y = oy + (p.y * scale).toFloat()
+                            if (i == 0) moveTo(x, y) else lineTo(x, y)
+                        }
+                        close()
+                    }
+                    drawPath(path = path, color = color)
+                    drawPath(path = path, color = Color.Black, style = Stroke(width = 1f))
+                    for (hole in outline.holes) {
+                        val cx = ox + (hole.center.x * scale).toFloat()
+                        val cy = oy + (hole.center.y * scale).toFloat()
+                        val r = (hole.radius * scale).toFloat()
+                        drawCircle(color = SheetBackground, radius = r, center = Offset(cx, cy))
+                        drawCircle(
+                            color = Color.Black,
+                            radius = r,
+                            center = Offset(cx, cy),
+                            style = Stroke(width = 1f)
+                        )
+                    }
+                } else {
+                    drawRect(
+                        color = color,
+                        topLeft = Offset(ox, oy),
+                        size = Size(drawW, drawH)
+                    )
+                    drawRect(
+                        color = Color.Black,
+                        topLeft = Offset(ox, oy),
+                        size = Size(drawW, drawH),
+                        style = Stroke(width = 1f)
+                    )
+                }
+            }
+            else -> {
+                drawRect(
+                    color = color,
+                    topLeft = Offset(ox, oy),
+                    size = Size(drawW, drawH)
+                )
+                drawRect(
+                    color = Color.Black,
+                    topLeft = Offset(ox, oy),
+                    size = Size(drawW, drawH),
+                    style = Stroke(width = 1f)
+                )
             }
         }
     }
@@ -364,27 +502,27 @@ private fun partDescription(part: PartEntity): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PartEditorDialog(
-    part: PartEntity?,
+    part: PartEntity,
     onDismiss: () -> Unit,
     onSave: (PartEntity) -> Unit
 ) {
-    var name by remember { mutableStateOf(part?.name ?: "") }
-    var shape by remember { mutableStateOf(part?.shape ?: PartShape.RECTANGLE) }
-    var widthText by remember { mutableStateOf(part?.let { formatMm(it.widthMm) } ?: "") }
-    var heightText by remember { mutableStateOf(part?.let { formatMm(it.heightMm) } ?: "") }
-    var quantityText by remember { mutableStateOf(part?.quantity?.toString() ?: "1") }
-    var material by remember { mutableStateOf(part?.material ?: Material.MILD_STEEL) }
-    var thicknessText by remember { mutableStateOf(part?.let { formatMm(it.thicknessMm) } ?: "3") }
-    var allowRotation by remember { mutableStateOf(part?.allowRotation ?: true) }
-    var priorityText by remember { mutableStateOf(part?.priority?.toString() ?: "0") }
+    var name by remember { mutableStateOf(part.name) }
+    var shape by remember { mutableStateOf(part.shape) }
+    var widthText by remember { mutableStateOf(formatMm(part.widthMm)) }
+    var heightText by remember { mutableStateOf(formatMm(part.heightMm)) }
+    var quantityText by remember { mutableStateOf(part.quantity.toString()) }
+    var material by remember { mutableStateOf(part.material) }
+    var thicknessText by remember { mutableStateOf(formatMm(part.thicknessMm)) }
+    var allowRotation by remember { mutableStateOf(part.allowRotation) }
+    var priorityText by remember { mutableStateOf(part.priority.toString()) }
     var rotations by remember {
-        mutableStateOf(part?.allowedRotations ?: setOf(0, 90, 180, 270))
+        mutableStateOf(part.allowedRotations)
     }
     var materialMenuExpanded by remember { mutableStateOf(false) }
 
     // DXF parts keep their true outline; the editor only changes quantity,
     // priority and rotations for them (size comes from the DXF file).
-    val isDxf = part?.shape == PartShape.DXF
+    val isDxf = part.shape == PartShape.DXF
     // Numeric fields accept Persian/Arabic digits too ("۱۰" parses as 10).
     val width = parseDouble(widthText)
     val height = if (shape == PartShape.CIRCLE) width else parseDouble(heightText)
@@ -401,11 +539,7 @@ private fun PartEditorDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                stringResource(
-                    if (part == null) R.string.dialog_add_part else R.string.dialog_edit_part
-                )
-            )
+            Text(stringResource(R.string.dialog_edit_part))
         },
         text = {
             Column(
@@ -467,7 +601,7 @@ private fun PartEditorDialog(
                         )
                     }
                 } else {
-                    val dxfPart = part!!
+                    val dxfPart = part
                     Text(
                         text = "${formatMm(dxfPart.widthMm)} x " +
                             "${formatMm(dxfPart.heightMm)} mm  •  " +
@@ -595,9 +729,9 @@ private fun PartEditorDialog(
                     }
                     onSave(
                         PartEntity(
-                            id = part?.id ?: 0,
+                            id = part.id,
                             name = name.trim(),
-                            shape = part?.shape ?: shape,
+                            shape = if (isDxf) PartShape.DXF else shape,
                             widthMm = width!!,
                             heightMm = height!!,
                             quantity = quantity!!,
@@ -607,8 +741,8 @@ private fun PartEditorDialog(
                             allowedRotationsCsv = effectiveRotations
                                 .sorted().joinToString(","),
                             priority = priority,
-                            outlineJson = part?.outlineJson,
-                            sourceFile = part?.sourceFile
+                            outlineJson = part.outlineJson,
+                            sourceFile = part.sourceFile
                         )
                     )
                 }

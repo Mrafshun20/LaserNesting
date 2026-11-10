@@ -8,10 +8,8 @@
     <string name="tab_nest">چیدمان</string>
 
     <string name="parts_empty_title">هنوز قطعه‌ای نیست</string>
-    <string name="parts_empty_body">یک فایل DXF از مشتری وارد کنید، یا یک قطعه ساده دستی اضافه کنید. هر خط بسته در فایل DXF یک قطعه می‌شود.</string>
+    <string name="parts_empty_body">یک فایل DXF از مشتری وارد کنید. هر خط بسته در فایل DXF یک قطعه می‌شود.</string>
     <string name="parts_import_dxf">وارد کردن DXF</string>
-    <string name="parts_add_first">افزودن اولین قطعه</string>
-    <string name="parts_add_simple">افزودن قطعه ساده</string>
     <string name="parts_count">%1$d نوع قطعه  •  %2$d عدد</string>
     <string name="part_quantity_suffix">عدد</string>
     <string name="part_rotation_allowed">چرخش مجاز است</string>
@@ -34,7 +32,6 @@
     <string name="time_hour">ساعت</string>
     <string name="time_min">دقیقه</string>
 
-    <string name="dialog_add_part">افزودن قطعه</string>
     <string name="dialog_edit_part">ویرایش قطعه</string>
     <string name="dialog_save">ذخیره</string>
     <string name="dialog_cancel">لغو</string>
