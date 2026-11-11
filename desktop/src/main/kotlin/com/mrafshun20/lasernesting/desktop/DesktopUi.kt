@@ -49,6 +49,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -1063,6 +1064,7 @@ private fun clampSheetOffset(offset: Offset, scale: Float, size: IntSize): Offse
  * The wheel event is consumed over the canvas so it zooms instead of
  * scrolling the page.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun DesktopZoomableSheet(
     state: DesktopState,
