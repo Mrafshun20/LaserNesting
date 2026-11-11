@@ -390,4 +390,162 @@ private fun runSyntheticChecks() {
         "Synthetic 5: expected tiny-circle warning, got ${r5.warnings}"
     }
     println("Synthetic check 5 (large outline + details, multi-part kept): PASS")
+
+    // 6) A sheet: one large 200x100 rectangle containing two disjoint
+    //    40x30 outlines (the parts), one r=5 circle hole inside the
+    //    first part, and one tiny 4x18 outline inside the sheet but
+    //    outside both parts. The sheet itself is NOT a part; exactly
+    //    the two inner outlines are parts, the first carrying the one
+    //    hole, and the tiny outline is ignored as a detail.
+    val sheet = rectDxf(0.0, 0.0, 200.0, 100.0)       // area 20000
+    val partA = rectDxf(20.0, 20.0, 60.0, 50.0)       // area 1200
+    val partB = rectDxf(120.0, 20.0, 160.0, 50.0)     // area 1200
+    val holeA = circleDxf(40.0, 35.0, 5.0)            // hole in part A
+    val speckInSheet = rectDxf(80.0, 60.0, 84.0, 78.0) // area 72: ignored
+    val dxf6 = """
+      0
+    SECTION
+      2
+    HEADER
+      9
+    ${'$'}INSUNITS
+     70
+         4
+      0
+    ENDSEC
+      0
+    SECTION
+      2
+    ENTITIES
+    $sheet
+    $partA
+    $partB
+    $holeA
+    $speckInSheet
+      0
+    ENDSEC
+      0
+    EOF
+    """.trimIndent()
+    val r6 = DxfParser.parse(dxf6)
+    check(r6.parts.size == 2) { "Synthetic 6: expected 2 parts, got ${r6.parts.size}: ${r6.parts.map { it.name }}" }
+    check(r6.parts.all { it.widthMm == 40.0 && it.heightMm == 30.0 }) {
+        "Synthetic 6: parts should be 40x30, got ${r6.parts.map { "${it.widthMm}x${it.heightMm}" }}"
+    }
+    val withHole = r6.parts.filter { it.holes.size == 1 }
+    check(withHole.size == 1 && withHole[0].holes[0].radius == 5.0) {
+        "Synthetic 6: expected exactly one part carrying one r=5 hole, got ${r6.parts.map { it.holes }}"
+    }
+    check(r6.parts.count { it.holes.isEmpty() } == 1) {
+        "Synthetic 6: expected the other part to have no holes"
+    }
+    check(r6.warnings.any { it.contains("sheet outline") }) {
+        "Synthetic 6: expected sheet-unpacked warning, got ${r6.warnings}"
+    }
+    check(r6.warnings.any { it.contains("lie inside another outline") }) {
+        "Synthetic 6: expected inner-loop warning for the tiny outline, got ${r6.warnings}"
+    }
+    println("Synthetic check 6 (sheet unpacked into its parts): PASS")
+
+    // 7) The cutoff must not be inflated by a sheet: one large 200x100
+    //    sheet containing two 40x30 outlines and one smaller 20x15
+    //    outline, plus one tiny 4x18 outline inside the sheet but outside
+    //    every part. The sheet is unpacked into exactly its three
+    //    part-sized children (40x30, 40x30, 20x15); the sheet itself is
+    //    not a part, and the tiny outline is ignored as a detail.
+    val sheet7 = rectDxf(0.0, 0.0, 200.0, 100.0)       // area 20000
+    val partA7 = rectDxf(20.0, 20.0, 60.0, 50.0)       // area 1200
+    val partB7 = rectDxf(120.0, 20.0, 160.0, 50.0)     // area 1200
+    val partC7 = rectDxf(20.0, 60.0, 40.0, 75.0)       // area 300
+    val speck7 = rectDxf(80.0, 60.0, 84.0, 78.0)       // area 72: ignored
+    val dxf7 = """
+      0
+    SECTION
+      2
+    HEADER
+      9
+    ${'$'}INSUNITS
+     70
+         4
+      0
+    ENDSEC
+      0
+    SECTION
+      2
+    ENTITIES
+    $sheet7
+    $partA7
+    $partB7
+    $partC7
+    $speck7
+      0
+    ENDSEC
+      0
+    EOF
+    """.trimIndent()
+    val r7 = DxfParser.parse(dxf7)
+    check(r7.parts.size == 3) { "Synthetic 7: expected 3 parts, got ${r7.parts.size}: ${r7.parts.map { it.name }}" }
+    val sizes7 = r7.parts.map { "${it.widthMm}x${it.heightMm}" }.sorted()
+    check(sizes7 == listOf("20.0x15.0", "40.0x30.0", "40.0x30.0")) {
+        "Synthetic 7: expected parts 40x30, 40x30, 20x15, got $sizes7"
+    }
+    check(r7.parts.none { it.widthMm == 200.0 && it.heightMm == 100.0 }) {
+        "Synthetic 7: the sheet itself must not be a part"
+    }
+    check(r7.warnings.any { it.contains("sheet outline") }) {
+        "Synthetic 7: expected sheet-unpacked warning, got ${r7.warnings}"
+    }
+    check(r7.warnings.any { it.contains("lie inside another outline") }) {
+        "Synthetic 7: expected inner-loop warning for the tiny outline, got ${r7.warnings}"
+    }
+    println("Synthetic check 7 (sheet must not inflate the cutoff): PASS")
+
+    // 8) A panel with repeated identical slots: one 200x100 rectangle
+    //    containing four identical 20x10 outlines. The panel is ONE
+    //    part (the slots are its cutouts), not a sheet — so exactly
+    //    one part, no sheet-unpacked warning, and the four slots are
+    //    counted as inner loops. (Two identical children would still
+    //    be a sheet of two identical parts — see check 6.)
+    val panel8 = rectDxf(0.0, 0.0, 200.0, 100.0)        // area 20000
+    val slotA8 = rectDxf(20.0, 20.0, 40.0, 30.0)        // area 200
+    val slotB8 = rectDxf(60.0, 20.0, 80.0, 30.0)        // area 200
+    val slotC8 = rectDxf(100.0, 20.0, 120.0, 30.0)      // area 200
+    val slotD8 = rectDxf(140.0, 20.0, 160.0, 30.0)      // area 200
+    val dxf8 = """
+      0
+    SECTION
+      2
+    HEADER
+      9
+    ${'$'}INSUNITS
+     70
+         4
+      0
+    ENDSEC
+      0
+    SECTION
+      2
+    ENTITIES
+    $panel8
+    $slotA8
+    $slotB8
+    $slotC8
+    $slotD8
+      0
+    ENDSEC
+      0
+    EOF
+    """.trimIndent()
+    val r8 = DxfParser.parse(dxf8)
+    check(r8.parts.size == 1) { "Synthetic 8: expected 1 part, got ${r8.parts.size}: ${r8.parts.map { it.name }}" }
+    check(r8.parts[0].widthMm == 200.0 && r8.parts[0].heightMm == 100.0) {
+        "Synthetic 8: part should be the 200x100 panel, got ${r8.parts[0].widthMm}x${r8.parts[0].heightMm}"
+    }
+    check(r8.warnings.none { it.contains("sheet outline") }) {
+        "Synthetic 8: must be no sheet-unpacked warning, got ${r8.warnings}"
+    }
+    check(r8.warnings.any { it.contains("lie inside another outline") }) {
+        "Synthetic 8: expected inner-loop warning for the four slots, got ${r8.warnings}"
+    }
+    println("Synthetic check 8 (panel with identical slots is one part): PASS")
 }

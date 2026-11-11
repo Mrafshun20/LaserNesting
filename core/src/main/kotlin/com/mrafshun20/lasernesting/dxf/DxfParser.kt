@@ -30,10 +30,24 @@ import kotlin.math.sqrt
  *   closed loops. A part is an outer contour plus everything inside it:
  *   loops lying strictly inside another loop are cutouts/slots of that
  *   part, not separate parts. A top-level loop that is tiny next to the
- *   largest outline (under 1% of its area, or under 100 mm^2) is an
- *   ignored detail/artifact, not a part — so a single-part drawing is
- *   not split into phantom parts. A genuine multi-part file still yields
- *   one part per large disjoint outer contour, each with its own holes.
+ *   largest NON-SHEET outline (under 1% of its area, or under 100 mm^2)
+ *   is an ignored detail/artifact, not a part — so a single-part drawing
+ *   is not split into phantom parts. The cutoff is two-pass: sheets are
+ *   first identified with the 100 mm^2 floor only, and only then is the
+ *   1% cutoff taken from the largest non-sheet outline, so a huge sheet
+ *   can never inflate the cutoff and drop real parts. A top-level
+ *   outline that contains two or more part-sized outlines is a SHEET
+ *   (a nest layout), not a part: its part-sized children are the parts,
+ *   and the sheet itself is never emitted as a part — unless three or
+ *   more of those children are effectively identical (same
+ *   bounding-box size within 0.5 mm and same point count), in which
+ *   case the outline is a PANEL whose children are repeated slots
+ *   (e.g. ventilation slots), not a sheet: it stays one part and its
+ *   identical children are its cutouts. Two identical children is a
+ *   pair of identical parts, not a slot pattern. A sheet holds varied
+ *   parts; a panel holds repeated identical slots. A genuine
+ *   multi-part file still yields one part per large disjoint outer
+ *   contour, each with its own holes.
  * - A CIRCLE inside a part outline is a hole of that part; a CIRCLE outside
  *   every outline is itself a round part (sampled as a polygon), unless
  *   it is tiny (same cutoff), in which case it is ignored.
@@ -97,14 +111,21 @@ object DxfParser {
     /**
      * A top-level outline (or a lone circle) smaller than this is an
      * ignored detail, not a part. The cutoff is the larger of this floor
-     * and [MIN_PART_AREA_FRACTION] of the largest top-level outline, so a
-     * speck stays a speck on both a small bracket and a large panel.
+     * and [MIN_PART_AREA_FRACTION] of the largest NON-SHEET top-level
+     * outline, so a speck stays a speck on both a small bracket and a
+     * large panel — and a huge sheet can never inflate the cutoff.
      */
     private const val MIN_PART_AREA_MM2 = 100.0
 
-    /** Fraction of the largest top-level outline's area below which a
-     *  top-level outline is an ignored detail, not a part. */
+    /** Fraction of the largest non-sheet top-level outline's area below
+     *  which a top-level outline is an ignored detail, not a part. */
     private const val MIN_PART_AREA_FRACTION = 0.01
+
+    /**
+     * Two part-sized children count as identical slots (not varied
+     * parts) when their bounding-box sizes agree within this tolerance.
+     */
+    private const val IDENTICAL_CHILD_TOLERANCE_MM = 0.5
 
     // ------------------------------------------------------------------
     // Raw DXF records
@@ -802,17 +823,153 @@ object DxfParser {
                 parent[i] = best
             }
 
+            // Top-level candidate indices (no container).
+            val topLevelIdx = ArrayList<Int>()
+            for (i in candidates.indices) {
+                if (parent[i] < 0) topLevelIdx.add(i)
+            }
+
+            // Two-pass cutoff, so a sheet cannot inflate the part-size
+            // floor and drop real parts. A part is the largest outer
+            // contour plus everything inside it. A top-level outline that
+            // is tiny next to the largest NON-SHEET one is a
+            // detail/artifact (a speck, a tick mark, a fragment), not a
+            // part: dropping it stops a single-part drawing from being
+            // split into phantom parts. Large disjoint outer contours are
+            // still parts of their own, each with its own holes.
+            //
+            // Pass 1 (sheet identification, cutoff-independent): a
+            // top-level outline is a sheet candidate when it contains
+            // two or more direct children of at least the absolute floor
+            // (100 mm^2). This uses no fraction of any outline, so a
+            // huge sheet cannot inflate it.
+            // Direct children of each candidate, by the parent pointer.
+            val childrenOf = HashMap<Int, MutableList<Int>>()
+            for (i in candidates.indices) {
+                val p = parent[i]
+                if (p >= 0) childrenOf.getOrPut(p) { ArrayList() }.add(i)
+            }
+            val sheetCandidateIdx = HashSet<Int>()
+            for (idx in topLevelIdx) {
+                val floorChildren =
+                    (childrenOf[idx] ?: emptyList()).count { candidates[it].area >= MIN_PART_AREA_MM2 }
+                if (floorChildren >= 2) sheetCandidateIdx.add(idx)
+            }
+            // Pass 2: the cutoff is 1% of the largest NON-SHEET
+            // top-level outline (a sheet's area must never set it), with
+            // the absolute floor as a lower bound. If every top-level
+            // outline is a sheet, fall back to the largest top-level
+            // outline as before.
+            val largestArea = topLevelIdx.maxOfOrNull { candidates[it].area } ?: 0.0
+            val largestNonSheetArea = topLevelIdx
+                .filter { it !in sheetCandidateIdx }
+                .maxOfOrNull { candidates[it].area }
+            val referenceArea = largestNonSheetArea ?: largestArea
+            val minPartArea = max(MIN_PART_AREA_FRACTION * referenceArea, MIN_PART_AREA_MM2)
+            val keptTopLevelIdx = ArrayList<Int>()
+            var tinyOutlineCount = 0
+            for (idx in topLevelIdx) {
+                if (candidates[idx].area >= minPartArea) {
+                    keptTopLevelIdx.add(idx)
+                } else {
+                    tinyOutlineCount++
+                }
+            }
+            if (tinyOutlineCount > 0) {
+                warnings.add(
+                    "$tinyOutlineCount tiny closed outline(s) ignored as details " +
+                        "(area below ${fmt(minPartArea)} mm^2)"
+                )
+            }
+
+            fun isPartSized(idx: Int): Boolean = candidates[idx].area >= minPartArea
+
+            /** Bounding-box width and height of [points], in millimetres. */
+            fun bboxWidthHeight(points: List<DxfPoint>): Pair<Double, Double> {
+                var minX = Double.MAX_VALUE
+                var minY = Double.MAX_VALUE
+                var maxX = -Double.MAX_VALUE
+                var maxY = -Double.MAX_VALUE
+                for (p in points) {
+                    minX = min(minX, p.x)
+                    minY = min(minY, p.y)
+                    maxX = max(maxX, p.x)
+                    maxY = max(maxY, p.y)
+                }
+                return (maxX - minX) to (maxY - minY)
+            }
+
+            /**
+             * True when every child in [children] is effectively the
+             * same outline: same bounding-box width and height within
+             * [IDENTICAL_CHILD_TOLERANCE_MM] and the same point count.
+             * Repeated identical slots (e.g. the ventilation slots of
+             * a panel) are not varied parts of a sheet. Needs three or
+             * more children: two identical outlines is a pair of
+             * identical parts, the normal nesting case, not a pattern.
+             */
+            fun allChildrenIdentical(children: List<Int>): Boolean {
+                if (children.size < 3) return false
+                val first = candidates[children[0]]
+                val (firstW, firstH) = bboxWidthHeight(first.points)
+                val firstPts = first.points.size
+                for (k in 1 until children.size) {
+                    val cand = candidates[children[k]]
+                    val (w, h) = bboxWidthHeight(cand.points)
+                    if (abs(w - firstW) > IDENTICAL_CHILD_TOLERANCE_MM) return false
+                    if (abs(h - firstH) > IDENTICAL_CHILD_TOLERANCE_MM) return false
+                    if (cand.points.size != firstPts) return false
+                }
+                return true
+            }
+
+            // Sheets: a kept top-level outline that contains two or more
+            // part-sized outlines is a sheet (a nest layout), not a part.
+            // Its part-sized children are the parts; the sheet itself is
+            // never emitted as a part. EXCEPTION: when three or more of
+            // its part-sized children are effectively identical (same
+            // bbox size within 0.5 mm and same point count), the outline
+            // is a panel with repeated identical slots (e.g. ventilation
+            // slots), not a sheet of varied parts — it stays a part and
+            // its children are its cutouts. A top-level outline with at
+            // most one part-sized child is a part whose inner loops are
+            // cutouts.
+            val sheetIdx = HashSet<Int>()
+            for (idx in keptTopLevelIdx) {
+                val partSizedChildren =
+                    (childrenOf[idx] ?: emptyList()).filter { isPartSized(it) }
+                if (partSizedChildren.size >= 2 && !allChildrenIdentical(partSizedChildren)) {
+                    sheetIdx.add(idx)
+                }
+            }
+            if (sheetIdx.isNotEmpty()) {
+                warnings.add(
+                    "${sheetIdx.size} sheet outline(s) unpacked into their parts " +
+                        "(not parts themselves)"
+                )
+            }
+
+            // Effective part outlines: kept non-sheet top-level outlines,
+            // plus the part-sized direct children of sheets.
+            val partOutlineIdx = ArrayList<Int>()
+            for (idx in keptTopLevelIdx) {
+                if (idx in sheetIdx) {
+                    for (child in childrenOf[idx] ?: emptyList()) {
+                        if (isPartSized(child)) partOutlineIdx.add(child)
+                    }
+                } else {
+                    partOutlineIdx.add(idx)
+                }
+            }
+            val partOutlineSet = partOutlineIdx.toHashSet()
+
+            // Inner loops that are not emitted as parts are cutouts/slots
+            // of the part (or sheet) containing them.
             var innerLoopCount = 0
             var innerPolyCount = 0
-            val topLevel = ArrayList<OutlineCandidate>()
             for (i in candidates.indices) {
-                if (parent[i] < 0) {
-                    topLevel.add(candidates[i])
-                } else if (candidates[i].fromTracedLoop) {
-                    innerLoopCount++
-                } else {
-                    innerPolyCount++
-                }
+                if (parent[i] < 0 || i in partOutlineSet) continue
+                if (candidates[i].fromTracedLoop) innerLoopCount++ else innerPolyCount++
             }
             if (innerLoopCount > 0) {
                 warnings.add(
@@ -827,50 +984,32 @@ object DxfParser {
                 )
             }
 
-            // A part is the largest outer contour plus everything inside it.
-            // A top-level outline that is tiny next to the largest one is a
-            // detail/artifact (a speck, a tick mark, a fragment), not a
-            // part: dropping it stops a single-part drawing from being
-            // split into phantom parts. Large disjoint outer contours are
-            // still parts of their own, each with its own holes.
-            val largestArea = topLevel.maxOfOrNull { it.area } ?: 0.0
-            val minPartArea = max(MIN_PART_AREA_FRACTION * largestArea, MIN_PART_AREA_MM2)
-            val keptTopLevel = ArrayList<OutlineCandidate>()
-            var tinyOutlineCount = 0
-            for (candidate in topLevel) {
-                if (candidate.area >= minPartArea) {
-                    keptTopLevel.add(candidate)
-                } else {
-                    tinyOutlineCount++
-                }
-            }
-            if (tinyOutlineCount > 0) {
-                warnings.add(
-                    "$tinyOutlineCount tiny closed outline(s) ignored as details " +
-                        "(area below ${fmt(minPartArea)} mm^2)"
-                )
-            }
-
-            // Circles: holes of the smallest kept top-level part containing
-            // them, or round parts of their own when inside no outline at
-            // all — unless tiny, in which case they are ignored details.
+            // Circles: holes of the smallest part outline containing
+            // them. A circle inside a sheet but outside every part in
+            // it is an ignored detail; a lone circle outside every
+            // outline is a round part of its own when part-sized, else
+            // an ignored detail.
             val holesByPart = HashMap<Int, MutableList<DxfCircleHole>>()
             val roundParts = ArrayList<OutlineCandidate>()
             val roundPartHoles = ArrayList<List<DxfCircleHole>>()
             var tinyCircleCount = 0
+            var sheetCircleCount = 0
             for (circle in sink.circles) {
                 var best = -1
                 var bestArea = Double.MAX_VALUE
-                for (i in keptTopLevel.indices) {
-                    if (keptTopLevel[i].area >= bestArea) continue
-                    if (pointInPolygon(circle.center, keptTopLevel[i].points)) {
-                        best = i
-                        bestArea = keptTopLevel[i].area
+                for (k in partOutlineIdx.indices) {
+                    val cand = candidates[partOutlineIdx[k]]
+                    if (cand.area >= bestArea) continue
+                    if (pointInPolygon(circle.center, cand.points)) {
+                        best = k
+                        bestArea = cand.area
                     }
                 }
                 if (best >= 0) {
                     holesByPart.getOrPut(best) { ArrayList() }
                         .add(DxfCircleHole(circle.center, circle.radius))
+                } else if (sheetIdx.any { pointInPolygon(circle.center, candidates[it].points) }) {
+                    sheetCircleCount++
                 } else {
                     val circleArea = PI * circle.radius * circle.radius
                     if (circleArea < minPartArea) {
@@ -884,6 +1023,12 @@ object DxfParser {
                     }
                 }
             }
+            if (sheetCircleCount > 0) {
+                warnings.add(
+                    "$sheetCircleCount circle(s) inside a sheet but outside every part " +
+                        "ignored as details"
+                )
+            }
             if (tinyCircleCount > 0) {
                 warnings.add(
                     "$tinyCircleCount tiny circle(s) outside every outline ignored as details " +
@@ -894,9 +1039,9 @@ object DxfParser {
             // Discovery order: loops/polylines/circles in the order found.
             val allParts = ArrayList<OutlineCandidate>()
             val allHoles = ArrayList<List<DxfCircleHole>>()
-            for (i in keptTopLevel.indices) {
-                allParts.add(keptTopLevel[i])
-                allHoles.add(holesByPart[i] ?: emptyList())
+            for (k in partOutlineIdx.indices) {
+                allParts.add(candidates[partOutlineIdx[k]])
+                allHoles.add(holesByPart[k] ?: emptyList())
             }
             for (i in roundParts.indices) {
                 allParts.add(roundParts[i])
