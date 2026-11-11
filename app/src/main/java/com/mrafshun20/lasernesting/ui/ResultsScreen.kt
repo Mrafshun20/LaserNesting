@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -78,6 +79,7 @@ import com.mrafshun20.lasernesting.export.Export
 import com.mrafshun20.lasernesting.nesting.NestSheet
 import com.mrafshun20.lasernesting.nesting.NestingEngine
 import com.mrafshun20.lasernesting.nesting.PlacedPart
+import com.mrafshun20.lasernesting.ui.theme.MutedRemnant
 import com.mrafshun20.lasernesting.ui.theme.SheetBackground
 import com.mrafshun20.lasernesting.ui.theme.partColor
 
@@ -106,13 +108,15 @@ fun ResultsScreen(viewModel: NestingViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Button(
             onClick = { viewModel.runNesting() },
             enabled = !isNesting,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
         ) {
             Icon(
                 imageVector = Icons.Filled.AutoAwesome,
@@ -131,7 +135,11 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.error.copy(alpha = 0.4f)
+                )
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -161,15 +169,16 @@ fun ResultsScreen(viewModel: NestingViewModel) {
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -179,7 +188,7 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                         )
                         Text(
                             text = "%.1f%%".format(Locale.US, r.overallUtilizationPercent),
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -187,10 +196,10 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                         progress = { (r.overallUtilizationPercent / 100.0).toFloat() },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(10.dp)
-                            .clip(RoundedCornerShape(5.dp)),
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
                         color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surface
+                        trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     )
                     Text(
                         text = stringResource(
@@ -199,29 +208,37 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         MiniStat(
                             label = stringResource(R.string.nest_sheets),
-                            value = "${r.sheetsUsed}"
+                            value = "${r.sheetsUsed}",
+                            modifier = Modifier.weight(1f)
                         )
+                        StatDivider()
                         MiniStat(
                             label = stringResource(R.string.nest_cut_length),
-                            value = "%.1f m".format(Locale.US, r.totalCutLengthMm / 1000.0)
+                            value = "%.1f m".format(Locale.US, r.totalCutLengthMm / 1000.0),
+                            modifier = Modifier.weight(1f)
                         )
+                        StatDivider()
                         MiniStat(
                             label = stringResource(R.string.nest_est_time),
                             value = formatMinutes(
                                 r.estimatedCutMinutes,
                                 stringResource(R.string.time_hour),
                                 stringResource(R.string.time_min)
-                            )
+                            ),
+                            modifier = Modifier.weight(1f)
                         )
+                        StatDivider()
                         MiniStat(
                             label = stringResource(R.string.nest_placed),
-                            value = "${r.totalPartsPlaced}/${r.totalPartsRequested}"
+                            value = "${r.totalPartsPlaced}/${r.totalPartsRequested}",
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
@@ -255,10 +272,10 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                     progress = { (sheet.utilizationPercent / 100.0).toFloat() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp)),
                     color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 )
                 // Tap the sheet (or the expand button) to open it large:
                 // pinch to zoom, drag to pan, so the layout can be
@@ -325,7 +342,7 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                             formatMm(remnant.heightMm)
                         ),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF2E7D32)
+                        color = MutedRemnant
                     )
                 }
             }
@@ -336,7 +353,11 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     ),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.4f)
+                    )
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -432,8 +453,11 @@ fun ResultsScreen(viewModel: NestingViewModel) {
 }
 
 @Composable
-private fun MiniStat(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun MiniStat(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium
@@ -447,6 +471,16 @@ private fun MiniStat(label: String, value: String) {
 }
 
 @Composable
+private fun StatDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(36.dp)
+            .background(MaterialTheme.colorScheme.outlineVariant)
+    )
+}
+
+@Composable
 private fun SheetSelectorCard(
     sheet: NestSheet,
     selected: Boolean,
@@ -454,20 +488,20 @@ private fun SheetSelectorCard(
 ) {
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.surfaceContainer
             }
         ),
         border = if (selected) {
             BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
         } else {
-            null
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         },
-        modifier = Modifier.width(120.dp)
+        modifier = Modifier.width(112.dp)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -478,23 +512,33 @@ private fun SheetSelectorCard(
                     R.string.nest_sheet_card_title,
                     sheet.index + 1
                 ),
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.titleSmall,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
             )
             Text(
                 text = stringResource(
                     R.string.nest_sheet_card_used,
                     sheet.utilizationPercent
                 ),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
             LinearProgressIndicator(
                 progress = { (sheet.utilizationPercent / 100.0).toFloat() },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp)),
                 color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surface
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
             )
         }
     }
@@ -674,7 +718,7 @@ private fun SheetCanvas(
         modifier = modifier
             .aspectRatio(aspectRatio)
             .background(SheetBackground)
-            .border(1.dp, Color.Gray)
+            .border(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         val scale = minOf(
             size.width / sheetWidthMm.toFloat(),
@@ -683,7 +727,7 @@ private fun SheetCanvas(
 
         // Light grid every 500 mm.
         val gridStepMm = 500.0
-        val gridColor = Color(0xFFE0E0E0)
+        val gridColor = Color(0xFFE4E7E9)
         var gridX = gridStepMm
         while (gridX < sheetWidthMm) {
             val x = (gridX * scale).toFloat()
@@ -711,7 +755,7 @@ private fun SheetCanvas(
         if (marginMm > 0) {
             val m = (marginMm * scale).toFloat()
             drawRect(
-                color = Color(0xFF9E9E9E),
+                color = Color(0xFF8A939A),
                 topLeft = Offset(m, m),
                 size = Size(size.width - 2 * m, size.height - 2 * m),
                 style = Stroke(width = 1.5f)
@@ -722,14 +766,14 @@ private fun SheetCanvas(
             drawPart(part, scale)
         }
 
-        // Remnant: largest leftover rectangle, dashed green outline.
+        // Remnant: largest leftover rectangle, dashed muted-green outline.
         sheet.remnant?.let { remnant ->
             val left = (remnant.xMm * scale).toFloat()
             val top = (remnant.yMm * scale).toFloat()
             val width = (remnant.widthMm * scale).toFloat()
             val height = (remnant.heightMm * scale).toFloat()
             drawRect(
-                color = Color(0xFF2E7D32),
+                color = MutedRemnant,
                 topLeft = Offset(left, top),
                 size = Size(width, height),
                 style = Stroke(width = 2f)

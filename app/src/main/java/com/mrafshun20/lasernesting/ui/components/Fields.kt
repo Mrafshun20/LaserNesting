@@ -1,6 +1,7 @@
 package com.mrafshun20.lasernesting.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -12,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import com.mrafshun20.lasernesting.ui.parseDouble
 import com.mrafshun20.lasernesting.ui.parseInt
 
@@ -51,6 +53,7 @@ fun DecimalField(
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         singleLine = true,
+        shape = RoundedCornerShape(10.dp),
         modifier = modifier.fillMaxWidth()
     )
 }
@@ -87,6 +90,7 @@ fun IntField(
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
+        shape = RoundedCornerShape(10.dp),
         modifier = modifier.fillMaxWidth()
     )
 }

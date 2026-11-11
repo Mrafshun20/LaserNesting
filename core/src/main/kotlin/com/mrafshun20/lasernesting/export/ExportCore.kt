@@ -82,11 +82,11 @@ object ExportCore {
             // Remnant outline (largest leftover rectangle), if any.
             sheet.remnant?.let { remnant ->
                 sb.append(
-                    """<rect x="${formatNumber(remnant.xMm)}" y="${formatNumber(offsetY + remnant.yMm)}" width="${formatNumber(remnant.widthMm)}" height="${formatNumber(remnant.heightMm)}" fill="none" stroke="#2E7D32" stroke-width="2" stroke-dasharray="12 8"/>"""
+                    """<rect x="${formatNumber(remnant.xMm)}" y="${formatNumber(offsetY + remnant.yMm)}" width="${formatNumber(remnant.widthMm)}" height="${formatNumber(remnant.heightMm)}" fill="none" stroke="#5E8A6B" stroke-width="2" stroke-dasharray="12 8"/>"""
                 )
                 sb.append('\n')
                 sb.append(
-                    """<text x="${formatNumber(remnant.xMm + 8)}" y="${formatNumber(offsetY + remnant.yMm + 30)}" font-size="24" fill="#2E7D32">Remnant ${formatNumber(remnant.widthMm)} x ${formatNumber(remnant.heightMm)}</text>"""
+                    """<text x="${formatNumber(remnant.xMm + 8)}" y="${formatNumber(offsetY + remnant.yMm + 30)}" font-size="24" fill="#5E8A6B">Remnant ${formatNumber(remnant.widthMm)} x ${formatNumber(remnant.heightMm)}</text>"""
                 )
                 sb.append('\n')
             }
@@ -110,7 +110,7 @@ object ExportCore {
         for (part in sheet.placed) sb.append(partSvg(part, 0.0))
         sheet.remnant?.let { remnant ->
             sb.append(
-                """<rect x="${formatNumber(remnant.xMm)}" y="${formatNumber(remnant.yMm)}" width="${formatNumber(remnant.widthMm)}" height="${formatNumber(remnant.heightMm)}" fill="none" stroke="#2E7D32" stroke-width="2" stroke-dasharray="12 8"/>"""
+                """<rect x="${formatNumber(remnant.xMm)}" y="${formatNumber(remnant.yMm)}" width="${formatNumber(remnant.widthMm)}" height="${formatNumber(remnant.heightMm)}" fill="none" stroke="#5E8A6B" stroke-width="2" stroke-dasharray="12 8"/>"""
             )
             sb.append('\n')
         }
@@ -229,8 +229,8 @@ object ExportCore {
 
     /** Part fill colours, shared with the Android theme (same palette). */
     private val PartPaletteHex = listOf(
-        "#42A5F5", "#EF5350", "#66BB6A", "#FFCA28", "#AB47BC", "#FF7043",
-        "#26A69A", "#EC407A", "#8D6E63", "#78909C", "#9CCC65", "#FFA726"
+        "#7A9BB5", "#A96A56", "#7FA08A", "#B89B5E", "#8A7A9E", "#5F8F8A",
+        "#9C8A76", "#7E8894", "#A87E7E", "#8A8A62", "#6E7F92", "#B08D5F"
     )
 
     private fun partColorHex(index: Int): String =

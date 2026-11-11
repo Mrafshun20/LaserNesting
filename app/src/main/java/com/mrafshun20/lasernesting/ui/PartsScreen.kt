@@ -4,6 +4,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,7 +26,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -148,8 +148,8 @@ fun PartsScreen(viewModel: NestingViewModel) {
                 Icon(
                     imageVector = Icons.Filled.Category,
                     contentDescription = null,
-                    modifier = Modifier.size(72.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    modifier = Modifier.size(56.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -173,8 +173,8 @@ fun PartsScreen(viewModel: NestingViewModel) {
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item {
                     Row(
@@ -241,16 +241,17 @@ private fun PartRow(
     val materialName = part.material.localizedName()
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
@@ -286,35 +287,68 @@ private fun PartRow(
                     )
                 }
                 IconButton(onClick = onEdit) {
-                    Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.dialog_edit_part))
+                    Icon(
+                        Icons.Filled.Edit,
+                        contentDescription = stringResource(R.string.dialog_edit_part),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.part_delete))
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = stringResource(R.string.part_delete),
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                HoldRepeatButton(
-                    onRepeat = { onQuantityChange(part.quantity - 1) },
-                    enabled = part.quantity > 1,
-                    description = stringResource(R.string.part_quantity_decrease)
-                ) {
-                    Icon(Icons.Filled.Remove, contentDescription = null)
-                }
-                Text(
-                    text = "${part.quantity}",
-                    style = MaterialTheme.typography.titleMedium,
+                // Quantity as one segmented control: a bordered pill with
+                // the value in the middle, instead of loose round buttons.
+                Row(
                     modifier = Modifier
-                        .clickable { onEdit() }
-                        .padding(horizontal = 6.dp)
-                )
-                HoldRepeatButton(
-                    onRepeat = { onQuantityChange(part.quantity + 1) },
-                    description = stringResource(R.string.part_quantity_increase)
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant,
+                            RoundedCornerShape(8.dp)
+                        )
+                        .background(
+                            MaterialTheme.colorScheme.surfaceContainerHigh,
+                            RoundedCornerShape(8.dp)
+                        )
+                        .padding(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
+                    HoldRepeatButton(
+                        onRepeat = { onQuantityChange(part.quantity - 1) },
+                        enabled = part.quantity > 1,
+                        description = stringResource(R.string.part_quantity_decrease)
+                    ) {
+                        Icon(
+                            Icons.Filled.Remove,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Text(
+                        text = "${part.quantity}",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier
+                            .clickable { onEdit() }
+                            .padding(horizontal = 10.dp)
+                    )
+                    HoldRepeatButton(
+                        onRepeat = { onQuantityChange(part.quantity + 1) },
+                        description = stringResource(R.string.part_quantity_increase)
+                    ) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 TextButton(onClick = onDuplicate) {
@@ -360,8 +394,8 @@ private fun HoldRepeatButton(
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
+            .size(36.dp)
+            .clip(RoundedCornerShape(6.dp))
             .background(
                 if (pressed && enabled) {
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
@@ -401,9 +435,9 @@ private fun PartPreview(part: PartEntity, color: Color) {
     Canvas(
         modifier = Modifier
             .size(60.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(SheetBackground)
-            .border(1.dp, Color.Gray, RoundedCornerShape(10.dp))
+            .border(1.dp, Color(0xFFC9CED2), RoundedCornerShape(8.dp))
     ) {
         val pad = 6.dp.toPx()
         val availW = size.width - 2 * pad

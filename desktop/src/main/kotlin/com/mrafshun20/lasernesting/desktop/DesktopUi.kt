@@ -28,6 +28,9 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
@@ -65,6 +68,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
@@ -183,7 +187,7 @@ fun DesktopApp(state: DesktopState) {
                                 .border(1.5.dp, Ui.Accent, Ui.RButton),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("LN", color = Ui.Accent, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                            Text("ib", color = Ui.Accent, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                         }
                         Column {
                             Text(
@@ -203,9 +207,9 @@ fun DesktopApp(state: DesktopState) {
                             .background(Ui.Border)
                     )
 
-                    NavPill(state.t("nav_parts"), tab == 0) { tab = 0 }
-                    NavPill(state.t("nav_setup"), tab == 1) { tab = 1 }
-                    NavPill(state.t("nav_nest"), tab == 2) { tab = 2 }
+                    NavPill(state.t("nav_parts"), Icons.Filled.List, tab == 0) { tab = 0 }
+                    NavPill(state.t("nav_setup"), Icons.Filled.Settings, tab == 1) { tab = 1 }
+                    NavPill(state.t("nav_nest"), Icons.Filled.GridView, tab == 2) { tab = 2 }
 
                     Box(
                         modifier = Modifier
@@ -216,9 +220,12 @@ fun DesktopApp(state: DesktopState) {
 
                     Text(
                         state.t("sec_nesting"),
-                        color = Ui.TextSecondary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = TextStyle(
+                            color = Ui.TextMuted,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 1.2.sp
+                        )
                     )
 
                     CamParameterCard(
@@ -413,7 +420,7 @@ fun DesktopApp(state: DesktopState) {
 }
 
 @Composable
-private fun NavPill(title: String, selected: Boolean, onClick: () -> Unit) {
+private fun NavPill(title: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -421,14 +428,25 @@ private fun NavPill(title: String, selected: Boolean, onClick: () -> Unit) {
             .background(if (selected) Ui.AccentDim else Color.Transparent)
             .border(1.dp, if (selected) Ui.Accent else Color.Transparent, Ui.RButton)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 14.dp, vertical = 11.dp)
     ) {
-        Text(
-            title,
-            color = if (selected) Ui.Accent else Ui.TextSecondary,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            fontSize = 14.sp
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (selected) Ui.Accent else Ui.TextSecondary,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                title,
+                color = if (selected) Ui.Accent else Ui.TextSecondary,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                fontSize = 14.sp
+            )
+        }
     }
 }
 
@@ -566,7 +584,18 @@ private fun SectionCard(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(title, color = Ui.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(16.dp)
+                    .background(Ui.Accent, RoundedCornerShape(2.dp))
+            )
+            Text(title, color = Ui.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        }
         content()
     }
 }
@@ -813,9 +842,9 @@ private fun DesktopPartPreview(part: PartInput, color: Color) {
     Canvas(
         modifier = Modifier
             .size(60.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(Ui.SheetFill)
-            .border(1.dp, Ui.Border, RoundedCornerShape(10.dp))
+            .border(1.dp, Ui.Border, RoundedCornerShape(8.dp))
     ) {
         val pad = 6.dp.toPx()
         val availW = size.width - 2 * pad
@@ -1894,7 +1923,7 @@ private fun DrawScope.drawSheetPart(
                     }
                     close()
                 }
-                drawPath(path = path, color = color.copy(alpha = 0.22f))
+                drawPath(path = path, color = color.copy(alpha = 0.30f))
                 drawPath(path = path, color = color, style = Stroke(width = 2f))
                 for (hole in NestingEngine.placedHoles(part)) {
                     val cx = left + (hole.center.x * scale).toFloat()
@@ -1916,12 +1945,12 @@ private fun DrawScope.drawSheetPart(
                     drawPath(path = cutPath, color = color, style = Stroke(width = 1.5f))
                 }
             } else {
-                drawRect(color = color.copy(alpha = 0.22f), topLeft = Offset(left, top), size = Size(width, height))
+                drawRect(color = color.copy(alpha = 0.30f), topLeft = Offset(left, top), size = Size(width, height))
                 drawRect(color = color, topLeft = Offset(left, top), size = Size(width, height), style = Stroke(width = 2f))
             }
         }
         else -> {
-            drawRect(color = color.copy(alpha = 0.22f), topLeft = Offset(left, top), size = Size(width, height))
+            drawRect(color = color.copy(alpha = 0.30f), topLeft = Offset(left, top), size = Size(width, height))
             drawRect(color = color, topLeft = Offset(left, top), size = Size(width, height), style = Stroke(width = 2f))
         }
     }

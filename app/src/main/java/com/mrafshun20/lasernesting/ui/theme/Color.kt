@@ -2,37 +2,44 @@ package com.mrafshun20.lasernesting.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Workshop dark theme — deep charcoal surfaces, IGEMS-style amber accent.
-val DarkBackground = Color(0xFF101214)
-val DarkSurface = Color(0xFF1C1F22)
-val DarkSurfaceVariant = Color(0xFF262A2E)
-val DarkOnSurface = Color(0xFFE8EAED)
-val DarkOnSurfaceVariant = Color(0xFF9AA0A6)
-val AmberPrimary = Color(0xFFFFC107)
-val SteelBlue = Color(0xFF64B5F6)
-val SteelTeal = Color(0xFF4DB6AC)
+// Workshop dark theme — deep neutral charcoal surfaces, one restrained
+// brass accent. No bright candy colours anywhere: the accent, the
+// secondary tones and the part fills are all desaturated and muted,
+// like a professional industrial CAM tool (IGEMS-style), not a toy.
+val DarkBackground = Color(0xFF0F1214)
+val DarkSurface = Color(0xFF171B1E)
+val DarkSurfaceVariant = Color(0xFF21272C)
+val DarkOnSurface = Color(0xFFE7EAEC)
+val DarkOnSurfaceVariant = Color(0xFF98A1A7)
+val BrassPrimary = Color(0xFFB89B5E)
+val SteelBlue = Color(0xFF7A9BB5)
+val SageGreen = Color(0xFF7FA08A)
+
+// Muted remnant green (nest view + exports): sage, not traffic-light.
+val MutedRemnant = Color(0xFF5E8A6B)
 
 // The sheet itself is drawn light, like a real sheet of metal on the bed.
-val SheetBackground = Color(0xFFF5F5F5)
+val SheetBackground = Color(0xFFF2F3F4)
 
 /**
  * Distinct fill colours for parts, shared by the on-screen canvas and the
- * SVG export. Vivid Material shades so they read clearly on the light
- * sheet and as dots on the dark UI.
+ * SVG export. Muted, desaturated industrial tones — every part stays
+ * distinguishable, but nothing reads as a bright crayon colour. The same
+ * 12 tones live in core ExportCore so the SVG export matches the screen.
  */
 val PartPaletteHex = listOf(
-    "#42A5F5",
-    "#EF5350",
-    "#66BB6A",
-    "#FFCA28",
-    "#AB47BC",
-    "#FF7043",
-    "#26A69A",
-    "#EC407A",
-    "#8D6E63",
-    "#78909C",
-    "#9CCC65",
-    "#FFA726"
+    "#7A9BB5",
+    "#A96A56",
+    "#7FA08A",
+    "#B89B5E",
+    "#8A7A9E",
+    "#5F8F8A",
+    "#9C8A76",
+    "#7E8894",
+    "#A87E7E",
+    "#8A8A62",
+    "#6E7F92",
+    "#B08D5F"
 )
 
 val PartPalette: List<Color> = PartPaletteHex.map {

@@ -11,20 +11,20 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFFFC107),
-    onPrimary = Color.Black,
-    primaryContainer = Color(0xFF5C4300),
-    onPrimaryContainer = Color(0xFFFFE082),
-    secondary = Color(0xFF64B5F6),
-    background = Color(0xFF101214),
-    onBackground = Color(0xFFE8EAED),
-    surface = Color(0xFF1C1F22),
-    onSurface = Color(0xFFE8EAED),
-    surfaceVariant = Color(0xFF262A2E),
-    onSurfaceVariant = Color(0xFF9AA0A6),
-    error = Color(0xFFFF5252),
-    errorContainer = Color(0xFF5C1A1A),
-    onErrorContainer = Color(0xFFFFCDD2)
+    primary = Color(0xFFB89B5E),
+    onPrimary = Color(0xFF141210),
+    primaryContainer = Color(0xFF3A3226),
+    onPrimaryContainer = Color(0xFFD9C08A),
+    secondary = Color(0xFF7A9BB5),
+    background = Color(0xFF0E1113),
+    onBackground = Color(0xFFE7EAEC),
+    surface = Color(0xFF161B1F),
+    onSurface = Color(0xFFE7EAEC),
+    surfaceVariant = Color(0xFF21272C),
+    onSurfaceVariant = Color(0xFF98A1A7),
+    error = Color(0xFFC07A6E),
+    errorContainer = Color(0xFF3A2320),
+    onErrorContainer = Color(0xFFE8B8AE)
 )
 
 /** Desktop entry point. Same flows as the Android app: parts (DXF import),
