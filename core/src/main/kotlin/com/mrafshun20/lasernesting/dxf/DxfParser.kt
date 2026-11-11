@@ -27,10 +27,16 @@ import kotlin.math.sqrt
  *   <= 5 degree steps, LWPOLYLINE/POLYLINE with bulge arcs sampled the same
  *   way), circles and closed polylines.
  * - Chains segments whose endpoints meet (0.01 mm match, 0.1 mm snap) into
- *   closed loops. Each outermost loop is one part; loops lying strictly
- *   inside another loop are cutouts/slots of that part, not separate parts.
+ *   closed loops. A part is an outer contour plus everything inside it:
+ *   loops lying strictly inside another loop are cutouts/slots of that
+ *   part, not separate parts. A top-level loop that is tiny next to the
+ *   largest outline (under 1% of its area, or under 100 mm^2) is an
+ *   ignored detail/artifact, not a part — so a single-part drawing is
+ *   not split into phantom parts. A genuine multi-part file still yields
+ *   one part per large disjoint outer contour, each with its own holes.
  * - A CIRCLE inside a part outline is a hole of that part; a CIRCLE outside
- *   every outline is itself a round part (sampled as a polygon).
+ *   every outline is itself a round part (sampled as a polygon), unless
+ *   it is tiny (same cutoff), in which case it is ignored.
  * - A closed LWPOLYLINE/POLYLINE is its own outline, unless it lies inside
  *   another outline, in which case it is a detail/cutout of that part.
  * - Normalises every part so its bounding-box minimum corner is at (0, 0).
@@ -87,6 +93,18 @@ object DxfParser {
 
     /** How many open chains / inner loops get named individually in warnings. */
     private const val MAX_WARNING_EXAMPLES = 5
+
+    /**
+     * A top-level outline (or a lone circle) smaller than this is an
+     * ignored detail, not a part. The cutoff is the larger of this floor
+     * and [MIN_PART_AREA_FRACTION] of the largest top-level outline, so a
+     * speck stays a speck on both a small bracket and a large panel.
+     */
+    private const val MIN_PART_AREA_MM2 = 100.0
+
+    /** Fraction of the largest top-level outline's area below which a
+     *  top-level outline is an ignored detail, not a part. */
+    private const val MIN_PART_AREA_FRACTION = 0.01
 
     // ------------------------------------------------------------------
     // Raw DXF records
@@ -809,38 +827,75 @@ object DxfParser {
                 )
             }
 
-            // Circles: holes of the smallest top-level part containing them,
-            // or round parts of their own when inside no outline at all.
+            // A part is the largest outer contour plus everything inside it.
+            // A top-level outline that is tiny next to the largest one is a
+            // detail/artifact (a speck, a tick mark, a fragment), not a
+            // part: dropping it stops a single-part drawing from being
+            // split into phantom parts. Large disjoint outer contours are
+            // still parts of their own, each with its own holes.
+            val largestArea = topLevel.maxOfOrNull { it.area } ?: 0.0
+            val minPartArea = max(MIN_PART_AREA_FRACTION * largestArea, MIN_PART_AREA_MM2)
+            val keptTopLevel = ArrayList<OutlineCandidate>()
+            var tinyOutlineCount = 0
+            for (candidate in topLevel) {
+                if (candidate.area >= minPartArea) {
+                    keptTopLevel.add(candidate)
+                } else {
+                    tinyOutlineCount++
+                }
+            }
+            if (tinyOutlineCount > 0) {
+                warnings.add(
+                    "$tinyOutlineCount tiny closed outline(s) ignored as details " +
+                        "(area below ${fmt(minPartArea)} mm^2)"
+                )
+            }
+
+            // Circles: holes of the smallest kept top-level part containing
+            // them, or round parts of their own when inside no outline at
+            // all — unless tiny, in which case they are ignored details.
             val holesByPart = HashMap<Int, MutableList<DxfCircleHole>>()
             val roundParts = ArrayList<OutlineCandidate>()
             val roundPartHoles = ArrayList<List<DxfCircleHole>>()
+            var tinyCircleCount = 0
             for (circle in sink.circles) {
                 var best = -1
                 var bestArea = Double.MAX_VALUE
-                for (i in topLevel.indices) {
-                    if (topLevel[i].area >= bestArea) continue
-                    if (pointInPolygon(circle.center, topLevel[i].points)) {
+                for (i in keptTopLevel.indices) {
+                    if (keptTopLevel[i].area >= bestArea) continue
+                    if (pointInPolygon(circle.center, keptTopLevel[i].points)) {
                         best = i
-                        bestArea = topLevel[i].area
+                        bestArea = keptTopLevel[i].area
                     }
                 }
                 if (best >= 0) {
                     holesByPart.getOrPut(best) { ArrayList() }
                         .add(DxfCircleHole(circle.center, circle.radius))
                 } else {
-                    val pts = sampleCircle(circle.center.x, circle.center.y, circle.radius)
-                    roundParts.add(
-                        OutlineCandidate(pts, circle.layer, circle.block, circle.order, PI * circle.radius * circle.radius, false)
-                    )
-                    roundPartHoles.add(emptyList())
+                    val circleArea = PI * circle.radius * circle.radius
+                    if (circleArea < minPartArea) {
+                        tinyCircleCount++
+                    } else {
+                        val pts = sampleCircle(circle.center.x, circle.center.y, circle.radius)
+                        roundParts.add(
+                            OutlineCandidate(pts, circle.layer, circle.block, circle.order, circleArea, false)
+                        )
+                        roundPartHoles.add(emptyList())
+                    }
                 }
+            }
+            if (tinyCircleCount > 0) {
+                warnings.add(
+                    "$tinyCircleCount tiny circle(s) outside every outline ignored as details " +
+                        "(area below ${fmt(minPartArea)} mm^2)"
+                )
             }
 
             // Discovery order: loops/polylines/circles in the order found.
             val allParts = ArrayList<OutlineCandidate>()
             val allHoles = ArrayList<List<DxfCircleHole>>()
-            for (i in topLevel.indices) {
-                allParts.add(topLevel[i])
+            for (i in keptTopLevel.indices) {
+                allParts.add(keptTopLevel[i])
                 allHoles.add(holesByPart[i] ?: emptyList())
             }
             for (i in roundParts.indices) {

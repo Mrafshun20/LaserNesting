@@ -11,8 +11,10 @@ package com.mrafshun20.lasernesting.dxf
  * With no argument it runs the built-in synthetic checks only. With a file
  * argument it also parses that file and prints every part found.
  *
- * The sample file (1_6_lzph.dxf) is expected to yield 21 parts and 28
- * circle holes; the check below verifies that when the file is given.
+ * The sample file (1_6_lzph.dxf) is expected to yield 19 parts and 28
+ * circle holes under the corrected rule (21 outermost loops, of which the
+ * two tiny 4x20 mm specks are ignored as details); the check below
+ * verifies that when the file is given.
  */
 fun main(args: Array<String>) {
     runSyntheticChecks()
@@ -38,7 +40,7 @@ fun main(args: Array<String>) {
     for (warning in result.warnings) println("  ! $warning")
 
     if (path.endsWith("1_6_lzph.dxf")) {
-        check(result.parts.size == 21) { "Expected 21 parts, got ${result.parts.size}" }
+        check(result.parts.size == 19) { "Expected 19 parts, got ${result.parts.size}" }
         check(result.parts.sumOf { it.holes.size } == 28) {
             "Expected 28 holes, got ${result.parts.sumOf { it.holes.size }}"
         }
@@ -48,9 +50,45 @@ fun main(args: Array<String>) {
         check(result.parts.all { it.outline.all { p -> p.x >= 0.0 && p.y >= 0.0 } }) {
             "Every outline must be normalised to min corner (0, 0)"
         }
-        println("Sample-file checks: PASS (21 parts, 28 holes)")
+        println("Sample-file checks: PASS (19 parts, 28 holes)")
     }
 }
+
+/** DXF text for one axis-aligned rectangle as 4 LINE entities. */
+private fun rectDxf(x0: Double, y0: Double, x1: Double, y1: Double): String {
+    fun line(ax: Double, ay: Double, bx: Double, by: Double): String = """
+      0
+    LINE
+      8
+    BY_12
+     10
+    $ax
+     20
+    $ay
+     11
+    $bx
+     21
+    $by
+    """.trimIndent()
+    return listOf(
+        line(x0, y0, x1, y0),
+        line(x1, y0, x1, y1),
+        line(x1, y1, x0, y1),
+        line(x0, y1, x0, y0)
+    ).joinToString("\n")
+}
+
+/** DXF text for one CIRCLE entity. */
+private fun circleDxf(cx: Double, cy: Double, r: Double): String = """
+      0
+    CIRCLE
+     10
+    $cx
+     20
+    $cy
+     40
+    $r
+""".trimIndent()
 
 private fun runSyntheticChecks() {
     // 1) A 100x50 rectangle from 4 LINEs, one r=5 circle hole inside it,
@@ -297,4 +335,59 @@ private fun runSyntheticChecks() {
     check(r4.parts.isEmpty()) { "Synthetic 4: garbage should yield no parts" }
     check(r4.warnings.isNotEmpty()) { "Synthetic 4: garbage should yield a warning" }
     println("Synthetic check 4 (garbage input): PASS")
+
+    // 5) One large outline plus small inner/outer detail loops: the large
+    //    outline is ONE part (inner loop = cutout, tiny outer loops and
+    //    tiny lone circles are ignored details), while a second large
+    //    disjoint outline is still a part of its own.
+    val large = rectDxf(0.0, 0.0, 200.0, 100.0)       // area 20000
+    val other = rectDxf(300.0, 0.0, 400.0, 50.0)      // area 5000, disjoint
+    val inner = rectDxf(50.0, 40.0, 70.0, 50.0)       // inside large: cutout
+    val speck = rectDxf(500.0, 0.0, 504.0, 18.0)      // area 72: ignored
+    val holeCircle = circleDxf(100.0, 50.0, 5.0)      // hole in large
+    val speckCircle = circleDxf(600.0, 50.0, 2.0)     // area 12.6: ignored
+    val dxf5 = """
+      0
+    SECTION
+      2
+    HEADER
+      9
+    ${'$'}INSUNITS
+     70
+         4
+      0
+    ENDSEC
+      0
+    SECTION
+      2
+    ENTITIES
+    $large
+    $other
+    $inner
+    $speck
+    $holeCircle
+    $speckCircle
+      0
+    ENDSEC
+      0
+    EOF
+    """.trimIndent()
+    val r5 = DxfParser.parse(dxf5)
+    check(r5.parts.size == 2) { "Synthetic 5: expected 2 parts, got ${r5.parts.size}: ${r5.parts.map { it.name }}" }
+    val big = r5.parts.first { it.widthMm == 200.0 }
+    check(big.heightMm == 100.0) { "Synthetic 5: large part height wrong: ${big.heightMm}" }
+    check(big.holes.size == 1 && big.holes[0].radius == 5.0) {
+        "Synthetic 5: expected one r=5 hole in large part, got ${big.holes}"
+    }
+    val second = r5.parts.first { it.widthMm == 100.0 }
+    check(second.heightMm == 50.0 && second.holes.isEmpty()) {
+        "Synthetic 5: second part wrong: ${second.widthMm} x ${second.heightMm}"
+    }
+    check(r5.warnings.any { it.contains("tiny closed outline") }) {
+        "Synthetic 5: expected tiny-outline warning, got ${r5.warnings}"
+    }
+    check(r5.warnings.any { it.contains("tiny circle") }) {
+        "Synthetic 5: expected tiny-circle warning, got ${r5.warnings}"
+    }
+    println("Synthetic check 5 (large outline + details, multi-part kept): PASS")
 }
