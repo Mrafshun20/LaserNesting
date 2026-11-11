@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Laser Nesting</string>
+    <string name="app_name">ibebels</string>
     <string name="app_subtitle">Bystronic sheet nesting</string>
 
     <string name="tab_parts">Parts</string>

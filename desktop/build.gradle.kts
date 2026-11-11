@@ -21,11 +21,12 @@ compose.desktop {
             targetFormats(TargetFormat.Exe, TargetFormat.Msi)
             packageName = "com.mrafshun20.lasernesting"
             packageVersion = "2.0.0"
-            description = "Laser Nesting — Bystronic sheet nesting (IGEMS-style)"
+            description = "ibebels — Bystronic sheet nesting (IGEMS-style)"
             vendor = "Mrafshun20"
+            iconFile = project.file("src/main/resources/icon.png")
             windows {
                 menu = true
-                menuGroup = "Laser Nesting"
+                menuGroup = "ibebels"
                 shortcut = true
             }
         }

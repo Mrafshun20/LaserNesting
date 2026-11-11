@@ -307,7 +307,7 @@ fun DesktopApp(state: DesktopState) {
                             onClick = {
                                 val file = chooseFile(
                                     title = state.t("open_project"),
-                                    filterDescription = "Laser Nesting project (*.json)",
+                                    filterDescription = "ibebels project (*.json)",
                                     "json"
                                 )
                                 if (file != null) state.loadProject(file)
@@ -321,7 +321,7 @@ fun DesktopApp(state: DesktopState) {
                             onClick = {
                                 val file = chooseFile(
                                     title = state.t("save_project"),
-                                    filterDescription = "Laser Nesting project (*.json)",
+                                    filterDescription = "ibebels project (*.json)",
                                     "json",
                                     save = true,
                                     suggestedName = "LaserNesting-project.json"

@@ -34,7 +34,7 @@ fun main() = application {
     val windowState = rememberWindowState(size = DpSize(1100.dp, 800.dp))
     Window(
         onCloseRequest = ::exitApplication,
-        title = "Laser Nesting",
+        title = "ibebels",
         state = windowState
     ) {
         MaterialTheme(colorScheme = DarkColors) {

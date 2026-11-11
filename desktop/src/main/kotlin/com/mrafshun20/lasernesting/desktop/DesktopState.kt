@@ -54,7 +54,7 @@ data class DesktopSettings(
 /** Bilingual UI strings (Persian default / English) for the desktop app. */
 object DesktopStrings {
     private val en = mapOf(
-        "app_title" to "Laser Nesting",
+        "app_title" to "ibebels",
         "app_subtitle" to "Bystronic sheet nesting",
         "nav_parts" to "Parts",
         "nav_setup" to "Setup",
@@ -181,7 +181,7 @@ object DesktopStrings {
     )
 
     private val fa = mapOf(
-        "app_title" to "چیدمان لیزر",
+        "app_title" to "ibebels",
         "app_subtitle" to "چیدمان ورق برای بایسترونیک",
         "nav_parts" to "قطعات",
         "nav_setup" to "تنظیمات",
