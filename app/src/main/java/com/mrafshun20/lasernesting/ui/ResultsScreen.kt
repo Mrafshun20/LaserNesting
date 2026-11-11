@@ -4,8 +4,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,14 +25,20 @@ import androidx.compose.foundation.verticalScroll
 import java.util.Locale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,7 +47,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -49,10 +61,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import kotlin.math.roundToInt
 import com.mrafshun20.lasernesting.R
 import com.mrafshun20.lasernesting.data.PartShape
 import com.mrafshun20.lasernesting.export.Export
@@ -75,6 +94,7 @@ fun ResultsScreen(viewModel: NestingViewModel) {
     val settings by viewModel.settings.collectAsState()
     val context = LocalContext.current
     var selectedSheet by remember(result) { mutableIntStateOf(0) }
+    var showFullscreen by remember(result) { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (viewModel.nestResult == null && viewModel.nestError == null) {
@@ -240,13 +260,50 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
-                SheetCanvas(
-                    sheet = sheet,
-                    sheetWidthMm = settings.sheetWidthMm,
-                    sheetLengthMm = settings.sheetLengthMm,
-                    marginMm = settings.marginMm,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Tap the sheet (or the expand button) to open it large:
+                // pinch to zoom, drag to pan, so the layout can be
+                // inspected precisely. The in-place drawing is left
+                // untransformed so the page keeps scrolling normally.
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    SheetCanvas(
+                        sheet = sheet,
+                        sheetWidthMm = settings.sheetWidthMm,
+                        sheetLengthMm = settings.sheetLengthMm,
+                        marginMm = settings.marginMm,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showFullscreen = true }
+                    )
+                    IconButton(
+                        onClick = { showFullscreen = true },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                                RoundedCornerShape(8.dp)
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Fullscreen,
+                            contentDescription = stringResource(R.string.nest_enlarge)
+                        )
+                    }
+                }
+                if (showFullscreen) {
+                    Dialog(
+                        onDismissRequest = { showFullscreen = false },
+                        properties = DialogProperties(usePlatformDefaultWidth = false)
+                    ) {
+                        FullscreenSheetView(
+                            sheet = sheet,
+                            sheetWidthMm = settings.sheetWidthMm,
+                            sheetLengthMm = settings.sheetLengthMm,
+                            marginMm = settings.marginMm,
+                            onClose = { showFullscreen = false }
+                        )
+                    }
+                }
                 Text(
                     text = stringResource(
                         R.string.nest_sheet_summary,
@@ -438,6 +495,156 @@ private fun SheetSelectorCard(
                     .clip(RoundedCornerShape(3.dp)),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surface
+            )
+        }
+    }
+}
+
+/**
+ * Keeps a panned sheet from drifting away: the pan is limited so the
+ * scaled sheet still covers the viewport, with a little overshoot so an
+ * edge can be brought to the centre. At 1x (or before layout) no pan.
+ */
+private fun clampSheetOffset(offset: Offset, scale: Float, size: IntSize): Offset {
+    if (size.width <= 0 || size.height <= 0 || scale <= 1f) return Offset.Zero
+    val maxX = size.width * (scale - 1f) / 2f + size.width * 0.25f
+    val maxY = size.height * (scale - 1f) / 2f + size.height * 0.25f
+    return Offset(
+        offset.x.coerceIn(-maxX, maxX),
+        offset.y.coerceIn(-maxY, maxY)
+    )
+}
+
+/**
+ * Full-screen view of one nest sheet: the same vector sheet drawing,
+ * pinch-zoomable (1x–8x) and draggable, so the layout can be inspected
+ * precisely. The zoom is applied with graphicsLayer on the vector
+ * Canvas, so the drawing stays sharp. Buttons cover zoom in/out and
+ * fit-to-screen for users who cannot pinch; the zoom percentage is
+ * shown in the top bar.
+ */
+@Composable
+private fun FullscreenSheetView(
+    sheet: NestSheet,
+    sheetWidthMm: Double,
+    sheetLengthMm: Double,
+    marginMm: Double,
+    onClose: () -> Unit
+) {
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var viewportSize by remember { mutableStateOf(IntSize.Zero) }
+    val reset = {
+        scale = 1f
+        offset = Offset.Zero
+    }
+    val zoomBy = { factor: Float ->
+        val newScale = (scale * factor).coerceIn(1f, 8f)
+        scale = newScale
+        offset = if (newScale <= 1f) {
+            Offset.Zero
+        } else {
+            clampSheetOffset(offset, newScale, viewportSize)
+        }
+    }
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        val newScale = (scale * zoomChange).coerceIn(1f, 8f)
+        scale = newScale
+        offset = if (newScale <= 1f) {
+            Offset.Zero
+        } else {
+            clampSheetOffset(offset + panChange, newScale, viewportSize)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onClose) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.nest_zoom_close),
+                        tint = Color.White
+                    )
+                }
+                Text(
+                    text = stringResource(
+                        R.string.nest_sheet_used,
+                        sheet.index + 1, sheet.utilizationPercent
+                    ),
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "${(scale * 100).roundToInt()}%",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+                IconButton(onClick = { zoomBy(1f / 1.25f) }) {
+                    Icon(
+                        imageVector = Icons.Filled.ZoomOut,
+                        contentDescription = stringResource(R.string.nest_zoom_out),
+                        tint = Color.White
+                    )
+                }
+                IconButton(onClick = { zoomBy(1.25f) }) {
+                    Icon(
+                        imageVector = Icons.Filled.ZoomIn,
+                        contentDescription = stringResource(R.string.nest_zoom_in),
+                        tint = Color.White
+                    )
+                }
+                IconButton(onClick = reset) {
+                    Icon(
+                        imageVector = Icons.Filled.FitScreen,
+                        contentDescription = stringResource(R.string.nest_zoom_fit),
+                        tint = Color.White
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .onSizeChanged { viewportSize = it },
+                contentAlignment = Alignment.Center
+            ) {
+                SheetCanvas(
+                    sheet = sheet,
+                    sheetWidthMm = sheetWidthMm,
+                    sheetLengthMm = sheetLengthMm,
+                    marginMm = marginMm,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offset.x,
+                            translationY = offset.y
+                        )
+                        .transformable(transformState)
+                )
+            }
+            Text(
+                text = stringResource(R.string.nest_zoom_hint),
+                color = Color.White.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
             )
         }
     }

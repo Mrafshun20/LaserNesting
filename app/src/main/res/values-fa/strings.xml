@@ -93,6 +93,12 @@
     <string name="nest_sheet_zero">اندازه ورق باید بزرگ‌تر از صفر باشد.</string>
     <string name="nest_sheet_count_min">تعداد ورق باید حداقل ۱ باشد.</string>
     <string name="nest_sheet_too_big">ورق (%1$s در %2$s میلی‌متر) از ناحیه کاری %3$s بزرگ‌تر است (%4$s در %5$s میلی‌متر). ورق کوچک‌تر یا دستگاه دیگری انتخاب کنید.</string>
+    <string name="nest_enlarge">نمایش بزرگ</string>
+    <string name="nest_zoom_in">بزرگ‌نمایی</string>
+    <string name="nest_zoom_out">کوچک‌نمایی</string>
+    <string name="nest_zoom_fit">نمایش کامل</string>
+    <string name="nest_zoom_close">بستن</string>
+    <string name="nest_zoom_hint">با دو انگشت بزرگ و کوچک کنید • برای جابه‌جایی بکشید</string>
 
     <string name="dxf_imported">%1$d قطعه از %2$s وارد شد.</string>
     <string name="dxf_no_parts">در این فایل DXF هیچ قطعه بسته‌ای پیدا نشد.</string>

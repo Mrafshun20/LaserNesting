@@ -3,7 +3,9 @@ package com.mrafshun20.lasernesting.desktop
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,7 +22,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -38,6 +43,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,14 +57,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import com.mrafshun20.lasernesting.data.MachinePreset
 import com.mrafshun20.lasernesting.data.Material
 import com.mrafshun20.lasernesting.data.PartShape
@@ -920,7 +933,8 @@ private fun DesktopNestScreen(state: DesktopState) {
                 }
                 val sheet = r.sheets.firstOrNull { it.index == selectedSheet }
                     ?: r.sheets.first()
-                DesktopSheetCanvas(
+                DesktopZoomableSheet(
+                    state = state,
                     sheet = sheet,
                     sheetWidthMm = settings.sheetWidthMm,
                     sheetLengthMm = settings.sheetLengthMm,
@@ -1022,6 +1036,132 @@ private fun MiniStat(label: String, value: String) {
             text = label,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/**
+ * Keeps a panned sheet from drifting away: the pan is limited so the
+ * scaled sheet still covers the viewport, with a little overshoot so an
+ * edge can be brought to the centre. At 1x (or before layout) no pan.
+ */
+private fun clampSheetOffset(offset: Offset, scale: Float, size: IntSize): Offset {
+    if (size.width <= 0 || size.height <= 0 || scale <= 1f) return Offset.Zero
+    val maxX = size.width * (scale - 1f) / 2f + size.width * 0.25f
+    val maxY = size.height * (scale - 1f) / 2f + size.height * 0.25f
+    return Offset(
+        offset.x.coerceIn(-maxX, maxX),
+        offset.y.coerceIn(-maxY, maxY)
+    )
+}
+
+/**
+ * Zoomable sheet view (desktop): the same vector sheet drawing with
+ * zoom controls, mouse-drag panning and mouse-wheel zoom (1x–8x), so
+ * the layout can be inspected precisely. The zoom is applied with
+ * graphicsLayer on the vector Canvas, so the drawing stays sharp.
+ * The wheel event is consumed over the canvas so it zooms instead of
+ * scrolling the page.
+ */
+@Composable
+private fun DesktopZoomableSheet(
+    state: DesktopState,
+    sheet: NestSheet,
+    sheetWidthMm: Double,
+    sheetLengthMm: Double,
+    marginMm: Double,
+    modifier: Modifier = Modifier
+) {
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var viewportSize by remember { mutableStateOf(IntSize.Zero) }
+    val reset = {
+        scale = 1f
+        offset = Offset.Zero
+    }
+    val zoomBy = { factor: Float ->
+        val newScale = (scale * factor).coerceIn(1f, 8f)
+        scale = newScale
+        offset = if (newScale <= 1f) {
+            Offset.Zero
+        } else {
+            clampSheetOffset(offset, newScale, viewportSize)
+        }
+    }
+
+    Column(modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "${(scale * 100).roundToInt()}%",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = { zoomBy(1f / 1.25f) }) {
+                Icon(
+                    imageVector = Icons.Filled.ZoomOut,
+                    contentDescription = state.t("zoom_out")
+                )
+            }
+            IconButton(onClick = { zoomBy(1.25f) }) {
+                Icon(
+                    imageVector = Icons.Filled.ZoomIn,
+                    contentDescription = state.t("zoom_in")
+                )
+            }
+            IconButton(onClick = reset) {
+                Icon(
+                    imageVector = Icons.Filled.FitScreen,
+                    contentDescription = state.t("zoom_fit")
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .onSizeChanged { viewportSize = it },
+            contentAlignment = Alignment.Center
+        ) {
+            DesktopSheetCanvas(
+                sheet = sheet,
+                sheetWidthMm = sheetWidthMm,
+                sheetLengthMm = sheetLengthMm,
+                marginMm = marginMm,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offset.x,
+                        translationY = offset.y
+                    )
+                    .pointerInput(Unit) {
+                        detectDragGestures { _, dragAmount ->
+                            if (scale > 1f) {
+                                offset = clampSheetOffset(
+                                    offset + dragAmount, scale, viewportSize
+                                )
+                            }
+                        }
+                    }
+                    .onPointerEvent(PointerEventType.Scroll) { event ->
+                        val delta = event.changes.firstOrNull()?.scrollDelta
+                            ?: Offset.Zero
+                        if (delta.y != 0f) {
+                            zoomBy(if (delta.y < 0f) 1.15f else 1f / 1.15f)
+                        }
+                        event.changes.forEach { it.consume() }
+                    }
+            )
+        }
+        Text(
+            text = state.t("zoom_hint"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp)
         )
     }
 }

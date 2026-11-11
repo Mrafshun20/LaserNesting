@@ -93,6 +93,12 @@
     <string name="nest_sheet_zero">Sheet size must be greater than zero.</string>
     <string name="nest_sheet_count_min">Sheet quantity must be at least 1.</string>
     <string name="nest_sheet_too_big">Sheet (%1$s x %2$s mm) is larger than the %3$s working area (%4$s x %5$s mm). Pick a smaller sheet or another machine.</string>
+    <string name="nest_enlarge">Enlarge</string>
+    <string name="nest_zoom_in">Zoom in</string>
+    <string name="nest_zoom_out">Zoom out</string>
+    <string name="nest_zoom_fit">Fit to screen</string>
+    <string name="nest_zoom_close">Close</string>
+    <string name="nest_zoom_hint">Pinch to zoom • Drag to pan</string>
 
     <string name="dxf_imported">Imported %1$d part(s) from %2$s.</string>
     <string name="dxf_no_parts">No closed parts were found in this DXF file.</string>
