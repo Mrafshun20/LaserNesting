@@ -23,6 +23,11 @@ compose.desktop {
             packageVersion = "2.0.0"
             description = "Laser Nesting — Bystronic sheet nesting (IGEMS-style)"
             vendor = "Mrafshun20"
+            windows {
+                menu = true
+                menuGroup = "Laser Nesting"
+                shortcut = true
+            }
         }
     }
 }
