@@ -23,11 +23,11 @@ compose.desktop {
             packageVersion = "2.0.0"
             description = "ibebels — Bystronic sheet nesting (IGEMS-style)"
             vendor = "Mrafshun20"
-            iconFile = project.file("src/main/resources/icon.png")
             windows {
                 menu = true
                 menuGroup = "ibebels"
                 shortcut = true
+                iconFile.set(project.file("src/main/resources/icon.ico"))
             }
         }
     }
