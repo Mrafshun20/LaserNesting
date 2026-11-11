@@ -49,6 +49,18 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
     var isNesting by mutableStateOf(false)
         private set
 
+    init {
+        // Persian is the default language. Installs that stored the old
+        // "system" default are migrated to Persian once, so the app opens
+        // in Persian unless the user explicitly picks English.
+        viewModelScope.launch {
+            val current = withContext(Dispatchers.IO) { repository.getSettings() }
+            if (current.language == "system") {
+                setLanguage("fa")
+            }
+        }
+    }
+
     /** Result of the last DXF import: how many parts landed, plus warnings. */
     var dxfImportMessage by mutableStateOf<String?>(null)
         private set

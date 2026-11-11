@@ -23,8 +23,9 @@ data class SettingsEntity(
     val allowRotation: Boolean = true,
     val cuttingSpeedMmPerMin: Double = 6000.0,
     /**
-     * App language: "system" (follow the device), "en" (English),
-     * or "fa" (Persian). Default follows the device.
+     * App language: "fa" (Persian) or "en" (English). Persian is the
+     * default; "system" (follow the device) is only a legacy stored
+     * value and is migrated to Persian on load.
      */
-    val language: String = "system"
+    val language: String = "fa"
 )

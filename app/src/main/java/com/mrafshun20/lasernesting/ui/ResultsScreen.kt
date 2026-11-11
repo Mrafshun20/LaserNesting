@@ -662,7 +662,10 @@ private fun FullscreenSheetView(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .onSizeChanged { viewportSize = it },
+                    .onSizeChanged { viewportSize = it }
+                    // Gestures on the whole viewport (not just the sheet):
+                    // a one-finger drag anywhere pans, a pinch anywhere zooms.
+                    .transformable(transformState),
                 contentAlignment = Alignment.Center
             ) {
                 SheetCanvas(
@@ -678,7 +681,6 @@ private fun FullscreenSheetView(
                             translationX = offset.x,
                             translationY = offset.y
                         )
-                        .transformable(transformState)
                 )
             }
             Text(
