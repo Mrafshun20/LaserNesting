@@ -786,6 +786,21 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPart(
                         style = Stroke(width = 1f)
                     )
                 }
+                // Cutouts (polygonal holes/slots): sheet-coloured, so a part
+                // nested inside a cutout reads as sitting in empty space,
+                // not overlapping solid material.
+                for (poly in NestingEngine.placedCutouts(part)) {
+                    val cutPath = Path().apply {
+                        poly.forEachIndexed { i, p ->
+                            val x = left + (p.x * scale).toFloat()
+                            val y = top + (p.y * scale).toFloat()
+                            if (i == 0) moveTo(x, y) else lineTo(x, y)
+                        }
+                        close()
+                    }
+                    drawPath(path = cutPath, color = SheetBackground)
+                    drawPath(path = cutPath, color = Color.Black, style = Stroke(width = 1f))
+                }
             } else {
                 // No outline stored: fall back to the bounding rectangle.
                 drawRect(
