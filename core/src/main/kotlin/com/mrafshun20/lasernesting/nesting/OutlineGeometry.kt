@@ -97,10 +97,59 @@ object OutlineGeometry {
         return sum
     }
 
-    /** True area of a part outline minus its circular holes. */
-    fun outlineArea(points: List<Point>, holes: List<CircleHole>): Double {
+    /** True area of a part outline minus its circular holes (and cutouts). */
+    fun outlineArea(
+        points: List<Point>,
+        holes: List<CircleHole>,
+        cutouts: List<List<Point>> = emptyList()
+    ): Double {
         val poly = polygonArea(points)
         val holeArea = holes.sumOf { kotlin.math.PI * it.radius * it.radius }
-        return (poly - holeArea).coerceAtLeast(0.0)
+        val cutArea = cutouts.sumOf { polygonArea(it) }
+        return (poly - holeArea - cutArea).coerceAtLeast(0.0)
+    }
+
+    /** Rotates every cutout polygon like [rotatePoints] (same normalisation basis). */
+    fun rotateCutouts(
+        cutouts: List<List<Point>>,
+        angleDegrees: Int,
+        widthMm: Double,
+        heightMm: Double
+    ): List<List<Point>> {
+        val angle = ((angleDegrees % 360) + 360) % 360
+        if (angle == 0 || cutouts.isEmpty()) return cutouts
+        return cutouts.map { poly ->
+            when (angle) {
+                90 -> poly.map { Point(heightMm - it.y, it.x) }
+                180 -> poly.map { Point(widthMm - it.x, heightMm - it.y) }
+                270 -> poly.map { Point(it.y, widthMm - it.x) }
+                else -> poly
+            }
+        }
+    }
+
+    /** Even-odd point-in-polygon test. */
+    fun pointInPolygon(x: Double, y: Double, poly: List<Point>): Boolean {
+        var inside = false
+        var j = poly.size - 1
+        for (i in poly.indices) {
+            val pi = poly[i]
+            val pj = poly[j]
+            if ((pi.y > y) != (pj.y > y) &&
+                x < (pj.x - pi.x) * (y - pi.y) / (pj.y - pi.y) + pi.x
+            ) {
+                inside = !inside
+            }
+            j = i
+        }
+        return inside
+    }
+
+    /** Polygon approximating a circle (counter-clockwise), [segments] sides. */
+    fun circlePolygon(cx: Double, cy: Double, r: Double, segments: Int = 96): List<Point> {
+        return List(segments) { i ->
+            val a = 2.0 * kotlin.math.PI * i / segments
+            Point(cx + r * kotlin.math.cos(a), cy + r * kotlin.math.sin(a))
+        }
     }
 }

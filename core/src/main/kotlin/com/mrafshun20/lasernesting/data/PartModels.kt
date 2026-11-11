@@ -30,11 +30,17 @@ data class PartOutline(
     val points: List<Point>,
     val holes: List<CircleHole> = emptyList(),
     val widthMm: Double,
-    val heightMm: Double
+    val heightMm: Double,
+    /** Non-circular inner cutouts (slots, rectangular windows...), closed polygons. */
+    val cutouts: List<List<Point>> = emptyList()
 ) {
     companion object {
         /** Builds an outline from raw points, normalizing min corner to (0, 0). */
-        fun normalized(points: List<Point>, holes: List<CircleHole> = emptyList()): PartOutline {
+        fun normalized(
+            points: List<Point>,
+            holes: List<CircleHole> = emptyList(),
+            cutouts: List<List<Point>> = emptyList()
+        ): PartOutline {
             if (points.isEmpty()) return PartOutline(emptyList(), emptyList(), 0.0, 0.0)
             val minX = points.minOf { it.x }
             val minY = points.minOf { it.y }
@@ -44,7 +50,8 @@ data class PartOutline(
             val shiftedHoles = holes.map {
                 CircleHole(Point(it.center.x - minX, it.center.y - minY), it.radius)
             }
-            return PartOutline(shifted, shiftedHoles, maxX - minX, maxY - minY)
+            val shiftedCutouts = cutouts.map { poly -> poly.map { Point(it.x - minX, it.y - minY) } }
+            return PartOutline(shifted, shiftedHoles, maxX - minX, maxY - minY, shiftedCutouts)
         }
     }
 }

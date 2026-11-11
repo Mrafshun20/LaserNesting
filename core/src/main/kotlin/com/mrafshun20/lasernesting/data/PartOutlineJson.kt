@@ -22,6 +22,16 @@ object PartOutlineJson {
             sb.append('[').append(h.center.x).append(',').append(h.center.y)
                 .append(',').append(h.radius).append(']')
         }
+        sb.append("],\"cutouts\":[")
+        outline.cutouts.forEachIndexed { i, poly ->
+            if (i > 0) sb.append(',')
+            sb.append('[')
+            poly.forEachIndexed { k, p ->
+                if (k > 0) sb.append(',')
+                sb.append(p.x).append(',').append(p.y)
+            }
+            sb.append(']')
+        }
         sb.append("]}")
         return sb.toString()
     }
@@ -44,10 +54,37 @@ object PartOutlineJson {
             if (pointsContentEnd < 0) return null
             val pointsArray = json.substring(pointsContentStart, pointsContentEnd)
             val holesContentStart = holesStart + holesKey.length
-            // The holes array ends at the final "]}".
-            val holesContentEnd = json.lastIndexOf("]}")
-            if (holesContentEnd < 0 || holesContentEnd <= holesContentStart) return null
+            // The holes array ends before ,"cutouts" (v3) or at the final "]}" (v2).
+            val cutoutsKey = "],\"cutouts\":["
+            val cutoutsStart = json.indexOf(cutoutsKey, holesContentStart)
+            val holesContentEnd = if (cutoutsStart >= 0) cutoutsStart else json.lastIndexOf("]}")
+            if (holesContentEnd < 0 || holesContentEnd < holesContentStart) return null
             val holesArray = json.substring(holesContentStart, holesContentEnd)
+            val cutouts = mutableListOf<List<Point>>()
+            if (cutoutsStart >= 0) {
+                val cStart = cutoutsStart + cutoutsKey.length
+                val cEnd = json.lastIndexOf("]}")
+                if (cEnd > cStart) {
+                    // Each cutout is a flat [x,y,x,y,...] array.
+                    var depth = 0
+                    val cur = StringBuilder()
+                    for (ch in json.substring(cStart, cEnd)) {
+                        when (ch) {
+                            '[' -> { depth++; cur.setLength(0) }
+                            ']' -> {
+                                depth--
+                                val nums = cur.toString().split(',').mapNotNull { it.trim().toDoubleOrNull() }
+                                val poly = ArrayList<Point>()
+                                var k = 0
+                                while (k + 1 < nums.size) { poly.add(Point(nums[k], nums[k + 1])); k += 2 }
+                                if (poly.size >= 3) cutouts.add(poly)
+                                cur.setLength(0)
+                            }
+                            else -> if (depth > 0) cur.append(ch)
+                        }
+                    }
+                }
+            }
             parsePairs(pointsArray) { x, y -> points.add(Point(x, y)) }
             parseTriples(holesArray) { x, y, r ->
                 holes.add(CircleHole(Point(x, y), r))
@@ -57,7 +94,7 @@ object PartOutlineJson {
             val minY = points.minOf { it.y }
             val maxX = points.maxOf { it.x }
             val maxY = points.maxOf { it.y }
-            PartOutline(points, holes, maxX - minX, maxY - minY)
+            PartOutline(points, holes, maxX - minX, maxY - minY, cutouts)
         } catch (_: Exception) {
             null
         }

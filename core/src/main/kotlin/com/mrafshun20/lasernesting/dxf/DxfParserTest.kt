@@ -442,7 +442,7 @@ private fun runSyntheticChecks() {
     check(r6.warnings.any { it.contains("sheet outline") }) {
         "Synthetic 6: expected sheet-unpacked warning, got ${r6.warnings}"
     }
-    check(r6.warnings.any { it.contains("lie inside another outline") }) {
+    check(r6.warnings.any { it.contains("inside a sheet outline") }) {
         "Synthetic 6: expected inner-loop warning for the tiny outline, got ${r6.warnings}"
     }
     println("Synthetic check 6 (sheet unpacked into its parts): PASS")
@@ -495,7 +495,7 @@ private fun runSyntheticChecks() {
     check(r7.warnings.any { it.contains("sheet outline") }) {
         "Synthetic 7: expected sheet-unpacked warning, got ${r7.warnings}"
     }
-    check(r7.warnings.any { it.contains("lie inside another outline") }) {
+    check(r7.warnings.any { it.contains("inside a sheet outline") }) {
         "Synthetic 7: expected inner-loop warning for the tiny outline, got ${r7.warnings}"
     }
     println("Synthetic check 7 (sheet must not inflate the cutoff): PASS")
@@ -544,8 +544,11 @@ private fun runSyntheticChecks() {
     check(r8.warnings.none { it.contains("sheet outline") }) {
         "Synthetic 8: must be no sheet-unpacked warning, got ${r8.warnings}"
     }
-    check(r8.warnings.any { it.contains("lie inside another outline") }) {
-        "Synthetic 8: expected inner-loop warning for the four slots, got ${r8.warnings}"
+    check(r8.parts[0].cutouts.size == 4) {
+        "Synthetic 8: the four slots must be kept as cutouts, got ${r8.parts[0].cutouts.size}"
+    }
+    check(r8.warnings.any { it.contains("cutout") }) {
+        "Synthetic 8: expected cutouts-kept note, got ${r8.warnings}"
     }
     println("Synthetic check 8 (panel with identical slots is one part): PASS")
 }

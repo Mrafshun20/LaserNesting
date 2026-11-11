@@ -18,7 +18,7 @@ object ExportCore {
     /** CSV cut list: one row per placed part, across all sheets. */
     fun cutListCsv(result: NestResult, sheetWidthMm: Double, sheetLengthMm: Double): String {
         val sb = StringBuilder()
-        sb.append("Part,Sheet,X (mm),Y (mm),Width (mm),Height (mm),Rotation (deg),Shape\n")
+        sb.append("Part,Sheet,X (mm),Y (mm),Width (mm),Height (mm),Rotation (deg),Shape,Area (mm2)\n")
         for (sheet in result.sheets) {
             for (part in sheet.placed) {
                 sb.append(escapeCsv(part.name)).append(',')
@@ -35,6 +35,7 @@ object ExportCore {
                         else -> "rectangle"
                     }
                 )
+                sb.append(',').append(formatNumber(com.mrafshun20.lasernesting.nesting.NestingEngine.partArea(part)))
                 sb.append('\n')
             }
         }
@@ -94,6 +95,29 @@ object ExportCore {
         return sb.toString()
     }
 
+    /** SVG of a single sheet (index into [NestResult.sheets]). */
+    fun sheetSvg(result: NestResult, position: Int, sheetWidthMm: Double, sheetLengthMm: Double): String {
+        val sheet = result.sheets[position]
+        val sb = StringBuilder()
+        sb.append(
+            """<svg xmlns="http://www.w3.org/2000/svg" width="${formatNumber(sheetWidthMm)}mm" height="${formatNumber(sheetLengthMm)}mm" viewBox="0 0 ${formatNumber(sheetWidthMm)} ${formatNumber(sheetLengthMm)}">"""
+        )
+        sb.append('\n')
+        sb.append(
+            """<rect x="0" y="0" width="${formatNumber(sheetWidthMm)}" height="${formatNumber(sheetLengthMm)}" fill="#f5f5f5" stroke="#333333" stroke-width="2"/>"""
+        )
+        sb.append('\n')
+        for (part in sheet.placed) sb.append(partSvg(part, 0.0))
+        sheet.remnant?.let { remnant ->
+            sb.append(
+                """<rect x="${formatNumber(remnant.xMm)}" y="${formatNumber(remnant.yMm)}" width="${formatNumber(remnant.widthMm)}" height="${formatNumber(remnant.heightMm)}" fill="none" stroke="#2E7D32" stroke-width="2" stroke-dasharray="12 8"/>"""
+            )
+            sb.append('\n')
+        }
+        sb.append("</svg>\n")
+        return sb.toString()
+    }
+
     private fun partSvg(part: PlacedPart, offsetY: Double): String {
         val color = partColorHex(part.colorIndex)
         val sb = StringBuilder()
@@ -110,6 +134,7 @@ object ExportCore {
                 val points = com.mrafshun20.lasernesting.nesting.NestingEngine
                     .placedOutlinePoints(part)
                 if (points.isNotEmpty()) {
+                    val cutouts = com.mrafshun20.lasernesting.nesting.NestingEngine.placedCutouts(part)
                     val path = buildString {
                         append("M ")
                         points.forEachIndexed { i, p ->
@@ -119,6 +144,16 @@ object ExportCore {
                             append(formatNumber(offsetY + part.yMm + p.y))
                         }
                         append(" Z")
+                        for (poly in cutouts) {
+                            append(" M ")
+                            poly.forEachIndexed { i, p ->
+                                if (i > 0) append(" L ")
+                                append(formatNumber(part.xMm + p.x))
+                                append(' ')
+                                append(formatNumber(offsetY + part.yMm + p.y))
+                            }
+                            append(" Z")
+                        }
                     }
                     sb.append(
                         """<path d="$path" fill="$color" fill-opacity="0.55" stroke="#222222" stroke-width="1.5" fill-rule="evenodd"/>"""

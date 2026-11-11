@@ -964,23 +964,29 @@ object DxfParser {
             val partOutlineSet = partOutlineIdx.toHashSet()
 
             // Inner loops that are not emitted as parts are cutouts/slots
-            // of the part (or sheet) containing them.
-            var innerLoopCount = 0
-            var innerPolyCount = 0
+            // of the part containing them: they are kept on the part and cut.
+            val cutoutsByPart = HashMap<Int, MutableList<List<DxfPoint>>>()
+            val partSlot = HashMap<Int, Int>()
+            for (k in partOutlineIdx.indices) partSlot[partOutlineIdx[k]] = k
+            var droppedInnerCount = 0
+            var keptCutoutCount = 0
             for (i in candidates.indices) {
                 if (parent[i] < 0 || i in partOutlineSet) continue
-                if (candidates[i].fromTracedLoop) innerLoopCount++ else innerPolyCount++
+                val owner = partSlot[parent[i]]
+                if (owner != null) {
+                    cutoutsByPart.getOrPut(owner) { ArrayList() }.add(candidates[i].points)
+                    keptCutoutCount++
+                } else {
+                    droppedInnerCount++
+                }
             }
-            if (innerLoopCount > 0) {
-                warnings.add(
-                    "$innerLoopCount closed loop(s) lie inside another outline " +
-                        "(slots/cutouts) and are not separate parts"
-                )
+            if (keptCutoutCount > 0) {
+                warnings.add("$keptCutoutCount inner cutout(s)/slot(s) kept on their parts")
             }
-            if (innerPolyCount > 0) {
+            if (droppedInnerCount > 0) {
                 warnings.add(
-                    "$innerPolyCount closed polyline(s) lie inside another outline " +
-                        "(small details/cutouts) and are not separate parts"
+                    "$droppedInnerCount closed loop(s) inside a sheet outline or nested " +
+                        "inside a cutout were ignored"
                 )
             }
 
@@ -1039,20 +1045,23 @@ object DxfParser {
             // Discovery order: loops/polylines/circles in the order found.
             val allParts = ArrayList<OutlineCandidate>()
             val allHoles = ArrayList<List<DxfCircleHole>>()
+            val allCutouts = ArrayList<List<List<DxfPoint>>>()
             for (k in partOutlineIdx.indices) {
                 allParts.add(candidates[partOutlineIdx[k]])
                 allHoles.add(holesByPart[k] ?: emptyList())
+                allCutouts.add(cutoutsByPart[k] ?: emptyList())
             }
             for (i in roundParts.indices) {
                 allParts.add(roundParts[i])
                 allHoles.add(roundPartHoles[i])
+                allCutouts.add(emptyList())
             }
             val order = allParts.indices.sortedBy { allParts[it].order }
             val result = ArrayList<DxfPart>()
             var partNumber = 0
             for (idx in order) {
                 partNumber++
-                result.add(buildPart(allParts[idx], allHoles[idx], partNumber))
+                result.add(buildPart(allParts[idx], allHoles[idx], partNumber, allCutouts[idx]))
             }
             return result
         }
@@ -1061,7 +1070,8 @@ object DxfParser {
         private fun buildPart(
             candidate: OutlineCandidate,
             holes: List<DxfCircleHole>,
-            partNumber: Int
+            partNumber: Int,
+            cutouts: List<List<DxfPoint>> = emptyList()
         ): DxfPart {
             var minX = Double.MAX_VALUE
             var minY = Double.MAX_VALUE
@@ -1073,9 +1083,12 @@ object DxfParser {
                 maxX = max(maxX, p.x)
                 maxY = max(maxY, p.y)
             }
-            val outline = candidate.points.map { DxfPoint(it.x - minX, it.y - minY) }
+            // CAD space is Y-up, the nest sheet and every screen are Y-down: flip
+            // Y here so a part looks on screen exactly as it does in the CAD file
+            // (export flips it back).
+            val outline = candidate.points.map { DxfPoint(it.x - minX, maxY - it.y) }
             val normHoles = holes.map {
-                DxfCircleHole(DxfPoint(it.center.x - minX, it.center.y - minY), it.radius)
+                DxfCircleHole(DxfPoint(it.center.x - minX, maxY - it.center.y), it.radius)
             }
             val name = candidate.block?.takeIf { isCleanPartName(it) } ?: "Part $partNumber"
             return DxfPart(
@@ -1084,7 +1097,8 @@ object DxfParser {
                 holes = normHoles,
                 widthMm = maxX - minX,
                 heightMm = maxY - minY,
-                layer = candidate.layer
+                layer = candidate.layer,
+                cutouts = cutouts.map { poly -> poly.map { DxfPoint(it.x - minX, maxY - it.y) } }
             )
         }
 
