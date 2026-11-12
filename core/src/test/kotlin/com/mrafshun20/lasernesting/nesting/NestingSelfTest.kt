@@ -188,5 +188,25 @@ fun main() {
         rectPart(2, 333.0, 211.0, 14)
     )
     run("tight 2-sheet job", tight, sheets = 2)
+    // 11) Lead-ins: pierce point in the scrap, entry on the contour.
+    val ring2 = polyPart(1, "Frame", listOf(Point(0.0, 0.0), Point(200.0, 0.0), Point(200.0, 120.0), Point(0.0, 120.0)),
+        listOf(CircleHole(Point(100.0, 60.0), 20.0)), 1,
+        cutouts = listOf(listOf(Point(20.0, 20.0), Point(60.0, 20.0), Point(60.0, 50.0), Point(20.0, 50.0))))
+    val lr = NestingEngine.nest(listOf(ring2), 600.0, 400.0, 1, 0.2, 3.0, 10.0, true, 0.0)
+    val lplan = CutPlanner.plan(lr.sheets[0], 400.0)
+    val placedShape = worldShape(lr.sheets[0].placed[0])
+    var leads = 0
+    for (op in lplan.ops) {
+        val li = com.mrafshun20.lasernesting.export.DxfExport.leadIn(op, 3.0) ?: continue
+        leads++
+        val (a, _) = li
+        val inMat = inMaterial(a, placedShape)
+        check(!inMat) { "lead-in pierce point of ${op.kind} contour lies inside the material at $a" }
+    }
+    check(leads == lplan.ops.size) { "every contour should get a lead-in ($leads of ${lplan.ops.size})" }
+    val dxfText = com.mrafshun20.lasernesting.export.DxfExport.sheetDxf(
+        lr.sheets[0], 600.0, 400.0, tech = com.mrafshun20.lasernesting.export.CutTech(3.0, 4, 0.5))
+    check(dxfText.contains("LEAD_IN") && dxfText.split("TABS").size > 4) { "DXF must contain lead-in and tab layers" }
+    println("lead-ins OK ($leads contours)")
     println("ALL NESTING CHECKS PASSED")
 }

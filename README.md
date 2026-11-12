@@ -212,9 +212,7 @@ Kotlin + Jetpack Compose + Material 3 + Room (Android) / Compose Desktop
 - **Raster resolution.** True-shape nesting works on a 1–3 mm grid, so each
   edge can carry up to one cell of extra clearance. Quality "Best yield"
   uses a finer grid and a longer time budget.
-- **No lead-ins / micro-joints / common-line cutting yet.** The DXF export
-  contains the cut order on separate layers (`CUT_INNER`, `CUT_OUTER`);
-  technology (lead-ins, tabs) is added in BySoft.
+- **Lead-ins and micro-joints are markers.** The DXF export writes a 3 mm lead-in per contour on layer `LEAD_IN` (pierce point in the scrap) and optional micro-joint ticks on `TABS`; `CutTech` controls them. Cutting gaps, arc lead-ins and common-line cutting are not implemented yet; BySoft applies final technology.
 - **DXF import** reads LINE / ARC / CIRCLE / LWPOLYLINE / POLYLINE / INSERT;
   splines and ellipses are skipped with a warning.
 - **Cutting-time figures** from the material table are typical values for
