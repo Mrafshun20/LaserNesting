@@ -1058,7 +1058,7 @@ private fun PartEditorDialog(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf(0, 90, 180, 270).forEach { angle ->
+                        listOf(0, 45, 90, 135, 180, 225, 270, 315).forEach { angle ->
                             FilterChip(
                                 selected = angle in rotations,
                                 onClick = {

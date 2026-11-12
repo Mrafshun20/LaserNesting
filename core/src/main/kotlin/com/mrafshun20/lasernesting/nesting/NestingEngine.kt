@@ -18,8 +18,8 @@ data class PartInput(
     val quantity: Int,
     val material: Material,
     val thicknessMm: Double,
-    /** Rotation angles this part may use, subset of {0, 90, 180, 270}. */
-    val allowedRotations: Set<Int> = setOf(0, 90, 180, 270),
+    /** Rotation angles this part may use, subset of {0, 45, 90, 135, 180, 225, 270, 315}. */
+    val allowedRotations: Set<Int> = setOf(0, 45, 90, 135, 180, 225, 270, 315),
     /** Higher priority nests first. */
     val priority: Int = 0,
     /** True DXF outline (normalized, min corner at origin); null for rect/circle. */
@@ -35,7 +35,7 @@ data class PlacedPart(
     val yMm: Double,
     val widthMm: Double,
     val heightMm: Double,
-    /** Rotation applied, one of 0, 90, 180, 270. */
+    /** Rotation applied, one of 0, 45, 90, 135, 180, 225, 270, 315. */
     val rotationDegrees: Int,
     val colorIndex: Int,
     /** True DXF outline (normalized); rotate by [rotationDegrees] when drawing. */
@@ -149,7 +149,8 @@ data class NestOptions(
  * Each part is kept at least (kerf + gap) away from its neighbours, and the
  * usable area is the sheet minus the edge margin on all four sides. Parts are
  * ordered highest-priority first and tried on every sheet in turn at the
- * allowed rotations (0 / 90 / 180 / 270).
+ * allowed rotations (0 / 45 / 90 / 135 / 180 / 225 / 270 / 315), so
+ * diagonal interlocking like real CAM nesting is possible.
  *
  * Two packers compete and the better layout wins:
  *  - MaxRects bounding-box packing (fast, exact for rectangles), and
@@ -161,7 +162,7 @@ data class NestOptions(
 object NestingEngine {
 
     /** All rotation angles, in the order they are preferred. */
-    val ALL_ROTATIONS = setOf(0, 90, 180, 270)
+    val ALL_ROTATIONS = setOf(0, 45, 90, 135, 180, 225, 270, 315)
 
     fun nest(
         parts: List<PartInput>,
@@ -459,9 +460,8 @@ object NestingEngine {
             var placed = false
             for (sheetIndex in bins.indices) {
                 val placement = tryPlace(bins[sheetIndex], packW, packH, allowed) ?: continue
-                val (angle, rotated, rect) = placement
-                val placedW = if (rotated) part.heightMm else part.widthMm
-                val placedH = if (rotated) part.widthMm else part.heightMm
+                val (angle, _, rect) = placement
+                val (placedW, placedH) = OutlineGeometry.rotatedSize(part.widthMm, part.heightMm, angle)
                 placedPerSheet[sheetIndex].add(
                     PlacedPart(
                         partId = part.id, name = part.name, shape = part.shape,
@@ -482,16 +482,16 @@ object NestingEngine {
     /**
      * Angles a part may use, given the global rotation switch. When the
      * global switch is off only 0 is allowed. Returns the angles in
-     * preference order (0, 90, 180, 270).
+     * preference order (0, 45, 90, 135, 180, 225, 270, 315).
      */
     fun allowedAngles(part: PartInput, allowRotationGlobal: Boolean): List<Int> {
         if (!allowRotationGlobal) return listOf(0)
         val allowed = part.allowedRotations.intersect(ALL_ROTATIONS)
         if (allowed.isEmpty()) return listOf(0)
-        return listOf(0, 90, 180, 270).filter { it in allowed }
+        return listOf(0, 45, 90, 135, 180, 225, 270, 315).filter { it in allowed }
     }
 
-    private data class TryPlacement(val angle: Int, val rotated: Boolean, val rect: Rect)
+    private data class TryPlacement(val angle: Int, val rect: Rect)
 
     private fun tryPlace(
         bin: MaxRectsBin,
@@ -499,14 +499,11 @@ object NestingEngine {
         packH: Double,
         allowedAngles: List<Int>
     ): TryPlacement? {
-        val canStraight = allowedAngles.any { it == 0 || it == 180 }
-        val canRotated = allowedAngles.any { it == 90 || it == 270 }
         var best: MaxRectsBin.Placement? = null
         var bestAngle = 0
-        var bestRotated = false
         var bestScore: Pair<Double, Double>? = null
 
-        fun consider(angle: Int, w: Double, h: Double, rotated: Boolean) {
+        fun consider(angle: Int, w: Double, h: Double) {
             val placement = bin.findBest(w, h, false) ?: return
             val score = Pair(placement.shortSideLeftover, placement.longSideLeftover)
             val prev = bestScore
@@ -515,17 +512,20 @@ object NestingEngine {
             ) {
                 best = placement
                 bestAngle = angle
-                bestRotated = rotated
                 bestScore = score
             }
         }
 
-        if (canStraight) consider(if (0 in allowedAngles) 0 else 180, packW, packH, false)
-        if (canRotated) consider(if (90 in allowedAngles) 90 else 270, packH, packW, true)
+        // Every allowed angle (0/45/90/...), each with its true rotated
+        // bounding box, so diagonal placements compete on equal footing.
+        for (angle in allowedAngles) {
+            val (w, h) = OutlineGeometry.rotatedSize(packW, packH, angle)
+            consider(angle, w, h)
+        }
 
         val placement = best ?: return null
         bin.place(placement.rect)
-        return TryPlacement(bestAngle, bestRotated, placement.rect)
+        return TryPlacement(bestAngle, placement.rect)
     }
 
     // ---------------------------------------------------------------

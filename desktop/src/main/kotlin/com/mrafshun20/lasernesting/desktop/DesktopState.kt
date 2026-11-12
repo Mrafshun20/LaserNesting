@@ -483,7 +483,7 @@ class DesktopState {
                     quantity = 1,
                     material = s.sheetMaterial,
                     thicknessMm = s.sheetThicknessMm,
-                    allowedRotations = setOf(0, 90, 180, 270),
+                    allowedRotations = setOf(0, 45, 90, 135, 180, 225, 270, 315),
                     priority = 0,
                     outline = dxfPart.toPartOutline()
                 )
@@ -735,8 +735,8 @@ class DesktopState {
                     ?: Material.MILD_STEEL
                 val rotations = obj.string("allowedRotations")
                     ?.split(',')?.mapNotNull { it.trim().toIntOrNull() }
-                    ?.filter { it in setOf(0, 90, 180, 270) }?.toSet()
-                    ?.ifEmpty { setOf(0) } ?: setOf(0, 90, 180, 270)
+                    ?.filter { it in setOf(0, 45, 90, 135, 180, 225, 270, 315) }?.toSet()
+                    ?.ifEmpty { setOf(0) } ?: setOf(0, 45, 90, 135, 180, 225, 270, 315)
                 val outlineJson = obj.string("outlineJson")
                 loaded.add(
                     PartInput(

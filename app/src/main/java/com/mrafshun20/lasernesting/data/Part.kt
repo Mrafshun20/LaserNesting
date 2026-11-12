@@ -37,7 +37,7 @@ data class PartEntity(
     val allowedRotations: Set<Int>
         get() = allowedRotationsCsv.split(',')
             .mapNotNull { it.trim().toIntOrNull() }
-            .filter { it in setOf(0, 90, 180, 270) }
+            .filter { it in setOf(0, 45, 90, 135, 180, 225, 270, 315) }
             .toSet()
             .ifEmpty { setOf(0) }
 

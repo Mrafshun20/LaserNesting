@@ -379,7 +379,7 @@ internal object RasterNester {
                 var bestGy = 0
                 var bestMask: PartMask? = null
                 for (angle in angles) {
-                    val mask = masks.getOrPut(part.id * 4 + angle / 90) {
+                    val mask = masks.getOrPut(part.id * 1000L + angle) {
                         MaskBuilder.build(PartGeometry.forPart(part, angle), angle, cell, padCells, reachMm)
                     }
                     val maxGx = floor((usableW - mask.widthMm) / cell + 1e-9).toInt()

@@ -7,7 +7,7 @@ clear sheet drawing, utilization and waste reporting, and cut-list /
 layout export.
 
 **Version 2** adds: bilingual Persian/English, DXF import of real customer
-parts, rotation angles 0/90/180/270, per-part priority, remnant reporting,
+parts, rotation angles 0/45/90/135/180/225/270/315, per-part priority, remnant reporting,
 and a Windows build that shares the same core.
 
 ## What it does
@@ -22,8 +22,8 @@ and a Windows build that shares the same core.
 - **Bilingual** — Persian and English, with a language selector in Setup.
   Persian uses the bundled **Vazirmatn** font; English uses the system
   font. The default follows the device; the selector overrides it.
-- **Rotation & priority** — each part allows rotation angles **0 / 90 /
-  180 / 270** (pick which ones), and a **priority** (higher priority
+- **Rotation & priority** — each part allows rotation angles **0 / 45 / 90 / 135 /
+  180 / 225 / 270 / 315** (pick which ones), and a **priority** (higher priority
   nests first). The global rotation switch in Setup still applies.
 - **Machine setup** — Bystronic presets: ByStar Fiber 3015 and 4020,
   BySmart 3015 and 4020. A preset defines the machine's maximum working
@@ -66,7 +66,7 @@ feel finished, not like a prototype.
 
 ## How the nesting works
 
-Parts are rasterised at every allowed rotation (0/90/180/270) into a bit
+Parts are rasterised at every allowed rotation (0/45/90/135/180/225/270/315) into a bit
 mask already inflated by half of (kerf + gap), and placed on a bit-grid of
 the sheet at the bottom-left-most free position. Because the mask follows
 the real outline, parts nest into the concave gaps, slots and **holes of

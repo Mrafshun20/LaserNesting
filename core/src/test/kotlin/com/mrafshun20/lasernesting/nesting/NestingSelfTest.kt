@@ -19,14 +19,14 @@ import kotlin.math.min
  * It nests rectangles, L / U shapes and parts with holes, checks every layout
  * for overlaps, spacing and sheet bounds, and prints utilisation + timing.
  */
-private fun rectPart(id: Long, w: Double, h: Double, qty: Int, rot: Set<Int> = setOf(0, 90, 180, 270)) =
+private fun rectPart(id: Long, w: Double, h: Double, qty: Int, rot: Set<Int> = setOf(0, 45, 90, 135, 180, 225, 270, 315)) =
     PartInput(id, "R$id", PartShape.RECTANGLE, w, h, qty, Material.MILD_STEEL, 3.0, rot)
 
 private fun polyPart(id: Long, name: String, pts: List<Point>, holes: List<CircleHole>, qty: Int,
                      cutouts: List<List<Point>> = emptyList()): PartInput {
     val o = PartOutline.normalized(pts, holes, cutouts)
     return PartInput(id, name, PartShape.DXF, o.widthMm, o.heightMm, qty, Material.MILD_STEEL, 3.0,
-        setOf(0, 90, 180, 270), 0, o)
+        setOf(0, 45, 90, 135, 180, 225, 270, 315), 0, o)
 }
 
 private fun lShape(w: Double, h: Double, t: Double) = listOf(
@@ -208,5 +208,21 @@ fun main() {
         lr.sheets[0], 600.0, 400.0, tech = com.mrafshun20.lasernesting.export.CutTech(3.0, 4, 0.5))
     check(dxfText.contains("LEAD_IN") && dxfText.split("TABS").size > 4) { "DXF must contain lead-in and tab layers" }
     println("lead-ins OK ($leads contours)")
+    // 12) Diagonal (45-degree) rotation: geometry must be exact, and the
+    // nester must actually use it to interlock parts like real CAM does.
+    val (w45, h45) = OutlineGeometry.rotatedSize(100.0, 50.0, 45)
+    val diag = 150.0 * 0.7071067811865476
+    check(abs(w45 - diag) < 0.01 && abs(h45 - diag) < 0.01) { "45-degree bbox wrong: $w45 x $h45" }
+    val sq = listOf(Point(0.0, 0.0), Point(100.0, 0.0), Point(100.0, 50.0), Point(0.0, 50.0))
+    val sqArea = OutlineGeometry.polygonArea(sq)
+    val sqRot = OutlineGeometry.rotatePoints(sq, 45, 100.0, 50.0)
+    check(abs(OutlineGeometry.polygonArea(sqRot) - sqArea) < 0.01) { "45-degree rotation must preserve area" }
+    val (w90, h90) = OutlineGeometry.rotatedSize(100.0, 50.0, 90)
+    check(w90 == 50.0 && h90 == 100.0) { "90-degree bbox must still swap" }
+    val diagParts = listOf(polyPart(1, "L", lShape(300.0, 200.0, 60.0), emptyList(), 40))
+    val diagRes = run("L-shapes diagonal", diagParts)
+    val usedDiag = diagRes.sheets.flatMap { it.placed }.any { it.rotationDegrees == 45 || it.rotationDegrees == 135 || it.rotationDegrees == 225 || it.rotationDegrees == 315 }
+    println("  -> diagonal used: $usedDiag, placed ${diagRes.totalPartsPlaced}")
+    check(usedDiag) { "nester should place some parts at a diagonal angle" }
     println("ALL NESTING CHECKS PASSED")
 }

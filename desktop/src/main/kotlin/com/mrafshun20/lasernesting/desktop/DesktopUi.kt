@@ -724,7 +724,7 @@ private fun DesktopPartsContent(state: DesktopState, parts: List<PartInput>) {
                         quantity = 1,
                         material = Material.MILD_STEEL,
                         thicknessMm = 3.0,
-                        allowedRotations = setOf(0, 90, 180, 270),
+                        allowedRotations = setOf(0, 45, 90, 135, 180, 225, 270, 315),
                         priority = 0
                     )
                 },
@@ -1168,7 +1168,7 @@ private fun PartEditorDialog(
                 )
                 if (allowRotation) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(0, 90, 180, 270).forEach { angle ->
+                        listOf(0, 45, 90, 135, 180, 225, 270, 315).forEach { angle ->
                             ChoiceChip(
                                 "$angle°",
                                 angle in rotations

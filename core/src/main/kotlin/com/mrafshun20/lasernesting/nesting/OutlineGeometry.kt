@@ -5,17 +5,28 @@ import com.mrafshun20.lasernesting.data.Point
 import kotlin.math.abs
 
 /**
- * Pure geometry helpers for part outlines. All angles are clockwise
- * degrees (0, 90, 180, 270). Outlines are normalized so their bounding-box
- * min corner is at (0, 0); rotating re-normalizes to the new bounding box.
+ * Pure geometry helpers for part outlines. Angles are clockwise degrees;
+ * any integer angle is supported (0, 45, 90, ...), not just the four
+ * cardinal ones, so diagonal nesting (the way real CAM nests interlocking
+ * parts) works. Outlines are normalized so their bounding-box min corner
+ * is at (0, 0); rotating re-normalizes to the new bounding box.
  */
 object OutlineGeometry {
+
+    /** Cosine/sine of [angleDegrees], clockwise in the doc's convention. */
+    private fun cosSin(angleDegrees: Int): Pair<Double, Double> {
+        val angle = ((angleDegrees % 360) + 360) % 360
+        val rad = Math.toRadians(angle.toDouble())
+        return Pair(kotlin.math.cos(rad), kotlin.math.sin(rad))
+    }
 
     /**
      * Rotates [points] (a closed outline normalized to its bounding box
      * [widthMm] x [heightMm]) by [angleDegrees] clockwise and returns the
      * rotated points, re-normalized so the new bounding-box min corner is
      * at (0, 0). The returned list is closed the same way as the input.
+     * Rotation is about the bounding-box centre, so it matches the old
+     * 90/180/270 results exactly and extends to any angle.
      */
     fun rotatePoints(
         points: List<Point>,
@@ -25,14 +36,13 @@ object OutlineGeometry {
     ): List<Point> {
         val angle = ((angleDegrees % 360) + 360) % 360
         if (points.isEmpty() || angle == 0) return points
-        val rotated = when (angle) {
-            // Clockwise 90: (x, y) -> (h - y, x)
-            90 -> points.map { Point(heightMm - it.y, it.x) }
-            // 180: (x, y) -> (w - x, h - y)
-            180 -> points.map { Point(widthMm - it.x, heightMm - it.y) }
-            // Clockwise 270: (x, y) -> (y, w - x)
-            270 -> points.map { Point(it.y, widthMm - it.x) }
-            else -> points
+        val (cos, sin) = cosSin(angle)
+        val cx = widthMm / 2.0
+        val cy = heightMm / 2.0
+        val rotated = points.map { p ->
+            val dx = p.x - cx
+            val dy = p.y - cy
+            Point(cx + dx * cos - dy * sin, cy + dx * sin + dy * cos)
         }
         // Re-normalize so the min corner is at (0, 0) (guards float drift).
         val minX = rotated.minOf { it.x }
@@ -50,25 +60,29 @@ object OutlineGeometry {
     ): CircleHole {
         val angle = ((angleDegrees % 360) + 360) % 360
         if (angle == 0) return hole
+        val (cos, sin) = cosSin(angle)
+        val cx = widthMm / 2.0
+        val cy = heightMm / 2.0
         val c = hole.center
-        val rotated = when (angle) {
-            90 -> Point(heightMm - c.y, c.x)
-            180 -> Point(widthMm - c.x, heightMm - c.y)
-            270 -> Point(c.y, widthMm - c.x)
-            else -> c
-        }
+        val dx = c.x - cx
+        val dy = c.y - cy
+        val rotated = Point(cx + dx * cos - dy * sin, cy + dx * sin + dy * cos)
         return CircleHole(rotated, hole.radius)
     }
 
     /**
      * Bounding-box size of a part after rotating it by [angleDegrees].
-     * 0 and 180 keep (width, height); 90 and 270 swap them.
+     * 0 and 180 keep (width, height); 90 and 270 swap them; any other
+     * angle uses the rotated-rectangle AABB formula.
      */
     fun rotatedSize(widthMm: Double, heightMm: Double, angleDegrees: Int): Pair<Double, Double> {
-        return when (((angleDegrees % 360) + 360) % 360) {
-            90, 270 -> Pair(heightMm, widthMm)
-            else -> Pair(widthMm, heightMm)
-        }
+        val angle = ((angleDegrees % 360) + 360) % 360
+        if (angle == 0 || angle == 180) return Pair(widthMm, heightMm)
+        if (angle == 90 || angle == 270) return Pair(heightMm, widthMm)
+        val (cos, sin) = cosSin(angle)
+        val w = abs(widthMm * cos) + abs(heightMm * sin)
+        val h = abs(widthMm * sin) + abs(heightMm * cos)
+        return Pair(w, h)
     }
 
     /** Area of a polygon (shoelace formula), absolute value. */
@@ -118,14 +132,7 @@ object OutlineGeometry {
     ): List<List<Point>> {
         val angle = ((angleDegrees % 360) + 360) % 360
         if (angle == 0 || cutouts.isEmpty()) return cutouts
-        return cutouts.map { poly ->
-            when (angle) {
-                90 -> poly.map { Point(heightMm - it.y, it.x) }
-                180 -> poly.map { Point(widthMm - it.x, heightMm - it.y) }
-                270 -> poly.map { Point(it.y, widthMm - it.x) }
-                else -> poly
-            }
-        }
+        return cutouts.map { poly -> rotatePoints(poly, angle, widthMm, heightMm) }
     }
 
     /** Even-odd point-in-polygon test. */
