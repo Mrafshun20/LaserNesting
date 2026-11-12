@@ -460,7 +460,7 @@ object NestingEngine {
             var placed = false
             for (sheetIndex in bins.indices) {
                 val placement = tryPlace(bins[sheetIndex], packW, packH, allowed) ?: continue
-                val (angle, _, rect) = placement
+                val (angle, rect) = placement
                 val (placedW, placedH) = OutlineGeometry.rotatedSize(part.widthMm, part.heightMm, angle)
                 placedPerSheet[sheetIndex].add(
                     PlacedPart(
