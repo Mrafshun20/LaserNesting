@@ -68,6 +68,10 @@
     <string name="setup_allow_rotation">Allow rotation</string>
     <string name="setup_cutting_speed">Cutting speed</string>
     <string name="setup_cutting_note">Cutting time is a rough estimate: total cut length divided by speed.</string>
+    <string name="setup_pricing">Pricing</string>
+    <string name="setup_price_per_kg">Price per kg</string>
+    <string name="setup_machine_rate">Machine rate / min</string>
+    <string name="setup_pierce_cost">Cost per pierce</string>
 
     <string name="nest_run">Auto-nest parts</string>
     <string name="nest_running">Nesting…</string>
@@ -77,6 +81,9 @@
     <string name="nest_cut_length">Cut length</string>
     <string name="nest_est_time">Est. time</string>
     <string name="nest_placed">Placed</string>
+    <string name="nest_price">Price</string>
+    <string name="nest_laser_travel">Laser travel</string>
+    <string name="part_preview_title">Part preview</string>
     <string name="nest_sheet_used">Sheet %1$d — %2$.1f%% used</string>
     <string name="nest_sheet_summary">Sheet %1$s x %2$s mm  •  margin %3$s mm  •  kerf %4$s mm + gap %5$s mm</string>
     <string name="nest_unplaced">Unplaced parts (%1$d)</string>

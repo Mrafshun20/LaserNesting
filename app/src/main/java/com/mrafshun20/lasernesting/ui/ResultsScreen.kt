@@ -2,6 +2,7 @@ package com.mrafshun20.lasernesting.ui
 
 import android.os.SystemClock
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -11,6 +12,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,6 +66,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -74,6 +78,7 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -208,28 +213,45 @@ fun ResultsScreen(viewModel: NestingViewModel) {
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = stringResource(R.string.nest_utilization),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            text = "%.1f%%".format(Locale.US, r.overallUtilizationPercent),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    // Gradient header band: primary fading into its
+                    // container, with the utilization number large and bold.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    )
+                                )
+                            )
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = stringResource(R.string.nest_utilization),
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = "%.1f%%".format(Locale.US, r.overallUtilizationPercent),
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                     LinearProgressIndicator(
                         progress = { (r.overallUtilizationPercent / 100.0).toFloat() },
@@ -248,37 +270,59 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        MiniStat(
-                            label = stringResource(R.string.nest_sheets),
-                            value = "${r.sheetsUsed}",
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatDivider()
-                        MiniStat(
-                            label = stringResource(R.string.nest_cut_length),
-                            value = "%.1f m".format(Locale.US, r.totalCutLengthMm / 1000.0),
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatDivider()
-                        MiniStat(
-                            label = stringResource(R.string.nest_est_time),
-                            value = formatMinutes(
-                                r.estimatedCutMinutes,
-                                stringResource(R.string.time_hour),
-                                stringResource(R.string.time_min)
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatDivider()
-                        MiniStat(
-                            label = stringResource(R.string.nest_placed),
-                            value = "${r.totalPartsPlaced}/${r.totalPartsRequested}",
-                            modifier = Modifier.weight(1f)
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            MiniStat(
+                                label = stringResource(R.string.nest_sheets),
+                                value = "${r.sheetsUsed}",
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatDivider()
+                            MiniStat(
+                                label = stringResource(R.string.nest_cut_length),
+                                value = "%.1f m".format(Locale.US, r.totalCutLengthMm / 1000.0),
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatDivider()
+                            MiniStat(
+                                label = stringResource(R.string.nest_est_time),
+                                value = formatMinutes(
+                                    r.estimatedCutMinutes,
+                                    stringResource(R.string.time_hour),
+                                    stringResource(R.string.time_min)
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            MiniStat(
+                                label = stringResource(R.string.nest_placed),
+                                value = "${r.totalPartsPlaced}/${r.totalPartsRequested}",
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatDivider()
+                            MiniStat(
+                                label = stringResource(R.string.nest_price),
+                                value = if (r.totalCost > 0) {
+                                    String.format(Locale.US, "%,.0f", r.totalCost)
+                                } else {
+                                    "—"
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatDivider()
+                            MiniStat(
+                                label = stringResource(R.string.nest_laser_travel),
+                                value = "%.1f m".format(Locale.US, r.totalTravelMm / 1000.0),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
@@ -525,8 +569,21 @@ private fun SheetSelectorCard(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    // Subtle press feedback: the card shrinks and fades slightly while
+    // held, then springs back — the standard modern touch response.
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.96f else 1f,
+        label = "sheetCardPress"
+    )
+    val pressAlpha by animateFloatAsState(
+        targetValue = if (pressed) 0.85f else 1f,
+        label = "sheetCardPressAlpha"
+    )
     Card(
         onClick = onClick,
+        interactionSource = interactionSource,
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) {
@@ -540,7 +597,16 @@ private fun SheetSelectorCard(
         } else {
             BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         },
-        modifier = Modifier.width(112.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (selected) 4.dp else 2.dp
+        ),
+        modifier = Modifier
+            .width(112.dp)
+            .graphicsLayer(
+                scaleX = pressScale,
+                scaleY = pressScale,
+                alpha = pressAlpha
+            )
     ) {
         Column(
             modifier = Modifier.padding(12.dp),

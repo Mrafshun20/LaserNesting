@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Layers
@@ -284,6 +285,30 @@ fun SetupScreen(viewModel: NestingViewModel) {
                 text = stringResource(R.string.setup_cutting_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        SectionCard(icon = Icons.Filled.AttachMoney, title = stringResource(R.string.setup_pricing)) {
+            DecimalField(
+                label = stringResource(R.string.setup_price_per_kg),
+                value = settings.pricePerKg,
+                onValueChange = { value ->
+                    viewModel.updateSettings { it.copy(pricePerKg = value) }
+                }
+            )
+            DecimalField(
+                label = stringResource(R.string.setup_machine_rate),
+                value = settings.machineRatePerMinute,
+                onValueChange = { value ->
+                    viewModel.updateSettings { it.copy(machineRatePerMinute = value) }
+                }
+            )
+            DecimalField(
+                label = stringResource(R.string.setup_pierce_cost),
+                value = settings.pierceCost,
+                onValueChange = { value ->
+                    viewModel.updateSettings { it.copy(pierceCost = value) }
+                }
             )
         }
     }

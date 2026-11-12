@@ -27,5 +27,11 @@ data class SettingsEntity(
      * default; "system" (follow the device) is only a legacy stored
      * value and is migrated to Persian on load.
      */
-    val language: String = "fa"
+    val language: String = "fa",
+    /** Sheet price per kg; 0 = no material cost figure. */
+    val pricePerKg: Double = 0.0,
+    /** Laser machine rate per cutting minute; 0 = no time cost figure. */
+    val machineRatePerMinute: Double = 0.0,
+    /** Cost of one pierce; 0 = no pierce cost figure. */
+    val pierceCost: Double = 0.0
 )

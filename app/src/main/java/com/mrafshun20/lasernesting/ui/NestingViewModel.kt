@@ -18,6 +18,7 @@ import com.mrafshun20.lasernesting.data.PartShape
 import com.mrafshun20.lasernesting.data.SettingsEntity
 import com.mrafshun20.lasernesting.dxf.DxfParser
 import com.mrafshun20.lasernesting.dxf.toPartOutline
+import com.mrafshun20.lasernesting.nesting.NestOptions
 import com.mrafshun20.lasernesting.nesting.NestResult
 import com.mrafshun20.lasernesting.nesting.NestingEngine
 import com.mrafshun20.lasernesting.nesting.PartInput
@@ -257,7 +258,12 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
                     gapMm = s.gapMm,
                     marginMm = s.marginMm,
                     allowRotationGlobal = s.allowRotation,
-                    cuttingSpeedMmPerMin = s.cuttingSpeedMmPerMin
+                    cuttingSpeedMmPerMin = s.cuttingSpeedMmPerMin,
+                    options = NestOptions(
+                        pricePerKg = s.pricePerKg,
+                        machineRatePerMinute = s.machineRatePerMinute,
+                        pierceCost = s.pierceCost
+                    )
                 )
             }
             nestResult = result

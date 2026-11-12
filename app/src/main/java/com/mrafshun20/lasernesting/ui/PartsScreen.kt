@@ -1,15 +1,19 @@
 package com.mrafshun20.lasernesting.ui
 
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,11 +36,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -62,11 +70,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,7 +85,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -84,7 +97,16 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import kotlin.math.exp
+import kotlin.math.hypot
+import kotlin.math.roundToInt
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.mrafshun20.lasernesting.R
 import com.mrafshun20.lasernesting.data.Material
 import com.mrafshun20.lasernesting.data.PartEntity
@@ -257,14 +279,15 @@ private fun PartRow(
     onDuplicate: () -> Unit
 ) {
     val materialName = part.material.localizedName()
+    var previewPart by remember { mutableStateOf<PartEntity?>(null) }
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
@@ -276,7 +299,7 @@ private fun PartRow(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PartPreview(part = part, color = color)
+                PartPreview(part = part, color = color, onClick = { previewPart = part })
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(part.name, style = MaterialTheme.typography.titleMedium)
@@ -381,6 +404,14 @@ private fun PartRow(
             }
         }
     }
+
+    previewPart?.let { preview ->
+        PartPreviewDialog(
+            part = preview,
+            color = color,
+            onDismiss = { previewPart = null }
+        )
+    }
 }
 
 /**
@@ -442,21 +473,56 @@ private fun HoldRepeatButton(
 }
 
 /**
- * Small preview of a part's true shape: the DXF outline (with holes),
- * a circle, or a rectangle, drawn in the part's colour on a light
- * sheet-like background, fitted into a 60 dp square while preserving
- * the part's aspect ratio. Lets the user recognise a part at a glance
- * instead of by name alone.
+ * Small preview of a part's true shape in a 60 dp square, with a zoom
+ * badge: tapping it opens the part large in a zoomable dialog, so the
+ * outline, holes and slots can be inspected properly.
  */
 @Composable
-private fun PartPreview(part: PartEntity, color: Color) {
-    Canvas(
+private fun PartPreview(part: PartEntity, color: Color, onClick: () -> Unit) {
+    Box(
         modifier = Modifier
             .size(60.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(SheetBackground)
             .border(1.dp, Color(0xFFC9CED2), RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
     ) {
+        PartShapeCanvas(
+            part = part,
+            color = color,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(2.dp)
+                .background(
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                    RoundedCornerShape(4.dp)
+                )
+                .padding(1.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.ZoomIn,
+                contentDescription = stringResource(R.string.part_preview_title),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Draws a part's true shape: the DXF outline (with holes and polygonal
+ * cutouts), a circle, or a rectangle, in the part's colour on a light
+ * sheet-like background, fitted into the available size while preserving
+ * the part's aspect ratio. Shared by the small row preview and the large
+ * zoomable preview dialog.
+ */
+@Composable
+private fun PartShapeCanvas(part: PartEntity, color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
         val pad = 6.dp.toPx()
         val availW = size.width - 2 * pad
         val availH = size.height - 2 * pad
@@ -506,6 +572,20 @@ private fun PartPreview(part: PartEntity, color: Color) {
                             style = Stroke(width = 1f)
                         )
                     }
+                    // Polygonal cutouts (slots, windows): sheet-coloured,
+                    // so they read as empty space cut out of the part.
+                    for (poly in outline.cutouts) {
+                        val cutPath = Path().apply {
+                            poly.forEachIndexed { i, p ->
+                                val x = ox + (p.x * scale).toFloat()
+                                val y = oy + (p.y * scale).toFloat()
+                                if (i == 0) moveTo(x, y) else lineTo(x, y)
+                            }
+                            close()
+                        }
+                        drawPath(path = cutPath, color = SheetBackground)
+                        drawPath(path = cutPath, color = Color.Black, style = Stroke(width = 1f))
+                    }
                 } else {
                     drawRect(
                         color = color,
@@ -531,6 +611,223 @@ private fun PartPreview(part: PartEntity, color: Color) {
                     topLeft = Offset(ox, oy),
                     size = Size(drawW, drawH),
                     style = Stroke(width = 1f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Keeps a panned part preview from drifting away: the pan is limited so
+ * the scaled part still covers the viewport, with a little overshoot.
+ * At 1x (or before layout) no pan.
+ */
+private fun clampPreviewOffset(offset: Offset, scale: Float, size: IntSize): Offset {
+    if (size.width <= 0 || size.height <= 0 || scale <= 1f) return Offset.Zero
+    val maxX = size.width * (scale - 1f) / 2f + size.width * 0.25f
+    val maxY = size.height * (scale - 1f) / 2f + size.height * 0.25f
+    return Offset(
+        offset.x.coerceIn(-maxX, maxX),
+        offset.y.coerceIn(-maxY, maxY)
+    )
+}
+
+/**
+ * Full-screen preview of one part: the same true-shape drawing, large,
+ * with the standard image-viewer gestures — pinch to zoom around the
+ * pinch point, one-finger drag to pan 1:1 with the finger at any zoom,
+ * double-tap to zoom in/out, and fling with inertia after a drag.
+ * Zoom buttons cover users who cannot pinch. Same gesture pattern as
+ * the full-screen sheet view in ResultsScreen.
+ */
+@Composable
+private fun PartPreviewDialog(
+    part: PartEntity,
+    color: Color,
+    onDismiss: () -> Unit
+) {
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var viewportSize by remember { mutableStateOf(IntSize.Zero) }
+    val scope = rememberCoroutineScope()
+    var animJob by remember { mutableStateOf<Job?>(null) }
+
+    fun clamp(offset: Offset, scale: Float): Offset =
+        clampPreviewOffset(offset, scale, viewportSize)
+
+    fun animateZoomTo(targetScale: Float, targetOffset: Offset) {
+        animJob?.cancel()
+        val startScale = scale
+        val startOffset = offset
+        val endOffset = clamp(targetOffset, targetScale)
+        animJob = scope.launch {
+            animate(0f, 1f, animationSpec = tween(250)) { f, _ ->
+                scale = startScale + (targetScale - startScale) * f
+                offset = startOffset + (endOffset - startOffset) * f
+            }
+        }
+    }
+
+    val reset = {
+        animJob?.cancel()
+        animJob = null
+        scale = 1f
+        offset = Offset.Zero
+    }
+    val zoomBy = { factor: Float ->
+        val newScale = (scale * factor).coerceIn(1f, 8f)
+        animateZoomTo(newScale, offset)
+    }
+    val onDoubleTap = { tap: Offset ->
+        val targetScale = if (scale < 2f) 3f else 1f
+        val targetOffset = if (targetScale <= 1f) {
+            Offset.Zero
+        } else {
+            val center = Offset(viewportSize.width / 2f, viewportSize.height / 2f)
+            val rel = tap - center
+            rel + (offset - rel) * (targetScale / scale)
+        }
+        animateZoomTo(targetScale, targetOffset)
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.nest_zoom_close),
+                            tint = Color.White
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = part.name,
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = partDescription(part),
+                            color = Color.White.copy(alpha = 0.7f),
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1
+                        )
+                    }
+                    Text(
+                        text = "${(scale * 100).roundToInt()}%",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    IconButton(onClick = { zoomBy(1f / 1.25f) }) {
+                        Icon(
+                            imageVector = Icons.Filled.ZoomOut,
+                            contentDescription = stringResource(R.string.nest_zoom_out),
+                            tint = Color.White
+                        )
+                    }
+                    IconButton(onClick = { zoomBy(1.25f) }) {
+                        Icon(
+                            imageVector = Icons.Filled.ZoomIn,
+                            contentDescription = stringResource(R.string.nest_zoom_in),
+                            tint = Color.White
+                        )
+                    }
+                    IconButton(onClick = reset) {
+                        Icon(
+                            imageVector = Icons.Filled.FitScreen,
+                            contentDescription = stringResource(R.string.nest_zoom_fit),
+                            tint = Color.White
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .onSizeChanged { viewportSize = it }
+                        .pointerInput(Unit) {
+                            detectTapGestures(onDoubleTap = { tap -> onDoubleTap(tap) })
+                        }
+                        .pointerInput(Unit) {
+                            while (true) {
+                                animJob?.cancel()
+                                animJob = null
+                                val tracker = VelocityTracker()
+                                detectTransformGestures { centroid, pan, zoom, _ ->
+                                    tracker.addPosition(
+                                        SystemClock.uptimeMillis(), centroid
+                                    )
+                                    val oldScale = scale
+                                    val newScale = (oldScale * zoom).coerceIn(1f, 8f)
+                                    val factor = newScale / oldScale
+                                    val center = Offset(
+                                        viewportSize.width / 2f,
+                                        viewportSize.height / 2f
+                                    )
+                                    val rel = centroid - center
+                                    val zoomed = rel + (offset - rel) * factor
+                                    offset = clamp(zoomed + pan, newScale)
+                                    scale = newScale
+                                }
+                                val velocity = tracker.calculateVelocity()
+                                if (scale > 1f && hypot(velocity.x, velocity.y) > 100f) {
+                                    animJob = scope.launch {
+                                        var v = velocity
+                                        var last = withFrameNanos { it }
+                                        while (hypot(v.x, v.y) > 20f) {
+                                            val now = withFrameNanos { it }
+                                            val dt = ((now - last) / 1_000_000_000f)
+                                                .coerceIn(0f, 0.05f)
+                                            last = now
+                                            v *= exp(-dt * 4.2f)
+                                            val unclamped = offset + Offset(v.x * dt, v.y * dt)
+                                            val clamped = clamp(unclamped, scale)
+                                            if (clamped.x != unclamped.x) v = v.copy(x = 0f)
+                                            if (clamped.y != unclamped.y) v = v.copy(y = 0f)
+                                            offset = clamped
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    PartShapeCanvas(
+                        part = part,
+                        color = color,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                translationX = offset.x,
+                                translationY = offset.y
+                            )
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.nest_zoom_hint),
+                    color = Color.White.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
                 )
             }
         }

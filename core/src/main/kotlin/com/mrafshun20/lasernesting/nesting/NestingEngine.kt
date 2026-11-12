@@ -103,6 +103,14 @@ data class NestResult(
     val scrapWeightKg: Double = 0.0,
     /** Material cost of the sheets used (0 when no price was given). */
     val materialCost: Double = 0.0,
+    /** Machine time cost (cutting minutes x machine rate), 0 when no rate was given. */
+    val cuttingCost: Double = 0.0,
+    /** Pierce cost (pierces x cost per pierce), 0 when no rate was given. */
+    val pierceCostTotal: Double = 0.0,
+    /** Total job price: machine time + pierces + material. */
+    val totalCost: Double = 0.0,
+    /** Total laser-head travel: cut length + rapid moves, millimetres. */
+    val totalTravelMm: Double = 0.0,
     /** Cutting speed used for the estimate, mm/min. */
     val cuttingSpeedUsedMmPerMin: Double = 0.0,
     /** Which nesting strategy won (for display / debugging). */
@@ -125,6 +133,10 @@ data class NestOptions(
     val sheetThicknessMm: Double = 3.0,
     /** Price per kg of sheet; 0 disables the cost figure. */
     val pricePerKg: Double = 0.0,
+    /** Machine rate per cutting minute (currency/min); 0 disables the figure. */
+    val machineRatePerMinute: Double = 0.0,
+    /** Cost per pierce (currency); 0 disables the figure. */
+    val pierceCost: Double = 0.0,
     /** Pierce time in seconds; 0 = take it from the material database. */
     val pierceSeconds: Double = 0.0,
     /** Rapid travel speed in mm/min. */
@@ -347,6 +359,9 @@ object NestingEngine {
         val t = options.sheetThicknessMm
         val partWeight = MaterialDb.weightKg(options.sheetMaterial, totalPlacedArea, t)
         val sheetWeight = MaterialDb.weightKg(options.sheetMaterial, sheetsUsed * sheetArea, t)
+        val materialCost = sheetWeight * options.pricePerKg.coerceAtLeast(0.0)
+        val cuttingCost = totalMinutes * options.machineRatePerMinute.coerceAtLeast(0.0)
+        val pierceCostTotal = totalPierces * options.pierceCost.coerceAtLeast(0.0)
 
         return NestResult(
             sheets = sheets,
@@ -362,7 +377,11 @@ object NestingEngine {
             partWeightKg = partWeight,
             sheetWeightKg = sheetWeight,
             scrapWeightKg = (sheetWeight - partWeight).coerceAtLeast(0.0),
-            materialCost = sheetWeight * options.pricePerKg.coerceAtLeast(0.0),
+            materialCost = materialCost,
+            cuttingCost = cuttingCost,
+            pierceCostTotal = pierceCostTotal,
+            totalCost = cuttingCost + pierceCostTotal + materialCost,
+            totalTravelMm = totalCutLength + totalRapid,
             cuttingSpeedUsedMmPerMin = speed,
             strategy = best.name
         )

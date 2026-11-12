@@ -103,6 +103,7 @@ import com.mrafshun20.lasernesting.nesting.PlacedPart
 import com.mrafshun20.lasernesting.nesting.UnplacedReason
 import java.io.File
 import java.time.LocalDate
+import java.util.Locale
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 
@@ -672,6 +673,7 @@ private fun IntField(
 @Composable
 private fun DesktopPartsContent(state: DesktopState, parts: List<PartInput>) {
     var editing by remember { mutableStateOf<PartInput?>(null) }
+    var previewing by remember { mutableStateOf<Pair<PartInput, Color>?>(null) }
     val totalPieces = parts.sumOf { it.quantity }
     val totalAreaM2 = parts.sumOf { it.widthMm * it.heightMm * it.quantity } / 1_000_000.0
 
@@ -769,7 +771,12 @@ private fun DesktopPartsContent(state: DesktopState, parts: List<PartInput>) {
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                DesktopPartPreview(part = part, color = partColor(index))
+                DesktopPartPreview(
+                    state = state,
+                    part = part,
+                    color = partColor(index),
+                    onClick = { previewing = part to partColor(index) }
+                )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(part.name, color = Ui.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -835,18 +842,60 @@ private fun DesktopPartsContent(state: DesktopState, parts: List<PartInput>) {
             }
         )
     }
+
+    previewing?.let { (part, color) ->
+        PartPreviewDialog(
+            state = state,
+            part = part,
+            color = color,
+            onDismiss = { previewing = null }
+        )
+    }
 }
 
-/** Small preview of a part's true shape (DXF outline with holes and cutouts, circle, or rectangle). */
+/** Small preview of a part's true shape, with a zoom badge: clicking it opens the part large in a preview dialog. */
 @Composable
-private fun DesktopPartPreview(part: PartInput, color: Color) {
-    Canvas(
+private fun DesktopPartPreview(
+    state: DesktopState,
+    part: PartInput,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Box(
         modifier = Modifier
             .size(60.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(Ui.SheetFill)
             .border(1.dp, Ui.Border, RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
     ) {
+        DesktopPartShapeCanvas(
+            part = part,
+            color = color,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(2.dp)
+                .background(Ui.Card.copy(alpha = 0.85f), RoundedCornerShape(4.dp))
+                .padding(1.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.ZoomIn,
+                contentDescription = state.t("part_preview"),
+                tint = Ui.TextSecondary,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+    }
+}
+
+/** Draws a part's true shape (DXF outline with holes and cutouts, circle, or rectangle), fitted into the available size. */
+@Composable
+private fun DesktopPartShapeCanvas(part: PartInput, color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
         val pad = 6.dp.toPx()
         val availW = size.width - 2 * pad
         val availH = size.height - 2 * pad
@@ -909,6 +958,64 @@ private fun DesktopPartPreview(part: PartInput, color: Color) {
             }
         }
     }
+}
+
+/** Large preview of one part in a dialog, with zoom buttons (mouse wheel zoom is on the sheet view; here buttons keep it simple). */
+@Composable
+private fun PartPreviewDialog(
+    state: DesktopState,
+    part: PartInput,
+    color: Color,
+    onDismiss: () -> Unit
+) {
+    var zoom by remember { mutableFloatStateOf(1f) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Ui.Surface,
+        titleContentColor = Ui.TextPrimary,
+        textContentColor = Ui.TextPrimary,
+        title = { Text(part.name, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val dims = when (part.shape) {
+                    PartShape.CIRCLE -> "Ø ${formatMm(part.widthMm)} ${state.t("mm")}"
+                    else -> "${formatMm(part.widthMm)} x ${formatMm(part.heightMm)} ${state.t("mm")}"
+                }
+                Text(dims, color = Ui.TextSecondary, fontSize = 12.sp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(360.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Ui.SheetFill)
+                        .border(1.dp, Ui.Border, RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    DesktopPartShapeCanvas(
+                        part = part,
+                        color = color,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(scaleX = zoom, scaleY = zoom)
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SmallIconBtn("−") { zoom = (zoom / 1.25f).coerceIn(1f, 8f) }
+                    Text(
+                        "${(zoom * 100).roundToInt()}%",
+                        color = Ui.TextPrimary,
+                        fontSize = 13.sp,
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    )
+                    SmallIconBtn("+") { zoom = (zoom * 1.25f).coerceIn(1f, 8f) }
+                    SmallIconBtn("1:1") { zoom = 1f }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(state.t("close")) }
+        }
+    )
 }
 
 @Composable
@@ -1267,6 +1374,20 @@ private fun DesktopSetupContent(state: DesktopState, settings: DesktopSettings) 
                     state.updateSettings { it.copy(pricePerKg = v) }
                 }
             )
+            DecimalField(
+                label = state.t("machine_rate"),
+                value = settings.machineRatePerMinute,
+                onValueChange = { v ->
+                    state.updateSettings { it.copy(machineRatePerMinute = v) }
+                }
+            )
+            DecimalField(
+                label = state.t("pierce_cost"),
+                value = settings.pierceCost,
+                onValueChange = { v ->
+                    state.updateSettings { it.copy(pierceCost = v) }
+                }
+            )
         }
 
         SectionCard(title = state.t("sec_app")) {
@@ -1340,6 +1461,34 @@ private fun DesktopNestContent(
                 Modifier.weight(1f), state.t("sec_sheet"),
                 "${formatMm(settings.sheetWidthMm)}×${formatMm(settings.sheetLengthMm)} ${state.t("mm")}",
                 Ui.Laser
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Ui.Gap)
+        ) {
+            val cutM = (nestResult?.totalCutLengthMm ?: 0.0) / 1000.0
+            val travelM = ((nestResult?.totalCutLengthMm ?: 0.0) +
+                (nestResult?.rapidLengthMm ?: 0.0)) / 1000.0
+            val totalCost = nestResult?.totalCost ?: 0.0
+            val materialCost = nestResult?.materialCost ?: 0.0
+            MetricCard(
+                Modifier.weight(1f), state.t("kpi_cut"),
+                String.format(Locale.US, "%.1f m", cutM), Ui.Laser
+            )
+            MetricCard(
+                Modifier.weight(1f), state.t("kpi_travel"),
+                String.format(Locale.US, "%.1f m", travelM), Ui.Pierce
+            )
+            MetricCard(
+                Modifier.weight(1f), state.t("kpi_price"),
+                if (totalCost > 0) String.format(Locale.US, "%,.0f", totalCost) else "—",
+                Ui.Accent
+            )
+            MetricCard(
+                Modifier.weight(1f), state.t("kpi_cost"),
+                if (materialCost > 0) String.format(Locale.US, "%,.0f", materialCost) else "—",
+                Ui.Success
             )
         }
 

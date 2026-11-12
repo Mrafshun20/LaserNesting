@@ -68,6 +68,10 @@
     <string name="setup_allow_rotation">اجازه چرخش</string>
     <string name="setup_cutting_speed">سرعت برش</string>
     <string name="setup_cutting_note">زمان برش تقریبی است: طول کل برش تقسیم بر سرعت.</string>
+    <string name="setup_pricing">قیمت‌گذاری</string>
+    <string name="setup_price_per_kg">قیمت هر کیلو</string>
+    <string name="setup_machine_rate">نرخ دستگاه در دقیقه</string>
+    <string name="setup_pierce_cost">هزینه هر سوراخ‌کاری</string>
 
     <string name="nest_run">چیدمان خودکار قطعات</string>
     <string name="nest_running">در حال چیدمان…</string>
@@ -77,6 +81,9 @@
     <string name="nest_cut_length">طول برش</string>
     <string name="nest_est_time">زمان تقریبی</string>
     <string name="nest_placed">چیده شده</string>
+    <string name="nest_price">قیمت</string>
+    <string name="nest_laser_travel">مسیر لیزر</string>
+    <string name="part_preview_title">پیش‌نمایش قطعه</string>
     <string name="nest_sheet_used">ورق %1$d — %2$.1f٪ استفاده شده</string>
     <string name="nest_sheet_summary">ورق %1$s در %2$s میلی‌متر  •  حاشیه %3$s میلی‌متر  •  کرف %4$s میلی‌متر + فاصله %5$s میلی‌متر</string>
     <string name="nest_unplaced">قطعات چیده‌نشده (%1$d)</string>

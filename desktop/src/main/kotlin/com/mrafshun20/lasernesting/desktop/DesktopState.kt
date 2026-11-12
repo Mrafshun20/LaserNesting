@@ -43,6 +43,10 @@ data class DesktopSettings(
     val pierceSeconds: Double = 0.0,
     /** Sheet price per kg; 0 = no cost figure. */
     val pricePerKg: Double = 0.0,
+    /** Laser machine rate per cutting minute; 0 = no time cost figure. */
+    val machineRatePerMinute: Double = 0.0,
+    /** Cost of one pierce; 0 = no pierce cost figure. */
+    val pierceCost: Double = 0.0,
     /** FAST, BALANCED or HIGH. */
     val quality: String = "BALANCED",
     val trueShape: Boolean = true,
@@ -94,6 +98,8 @@ object DesktopStrings {
         "rotations" to "Allowed angles",
         "save" to "Save",
         "cancel" to "Cancel",
+        "close" to "Close",
+        "part_preview" to "Part preview",
         "rectangle" to "Rectangle",
         "circle" to "Circle",
         "dxf_outline" to "DXF outline",
@@ -120,6 +126,8 @@ object DesktopStrings {
         "speed_hint" to "Table values are typical for a ~6 kW fiber laser — set your own speed for exact times.",
         "pierce_time" to "Pierce time (s, 0 = automatic)",
         "price_kg" to "Sheet price per kg (0 = off)",
+        "machine_rate" to "Machine rate per min (0 = off)",
+        "pierce_cost" to "Cost per pierce (0 = off)",
         "language" to "Language",
         "lang_fa" to "فارسی",
         "lang_en" to "English",
@@ -139,6 +147,8 @@ object DesktopStrings {
         "kpi_weight" to "Parts weight",
         "kpi_scrap" to "Scrap",
         "kpi_cost" to "Material cost",
+        "kpi_price" to "Total price",
+        "kpi_travel" to "Laser travel",
         "waste" to "Waste",
         "sheet_tab" to "Sheet",
         "remnant" to "Remnant",
@@ -221,6 +231,8 @@ object DesktopStrings {
         "rotations" to "زاویه‌های مجاز",
         "save" to "ذخیره",
         "cancel" to "انصراف",
+        "close" to "بستن",
+        "part_preview" to "پیش‌نمایش قطعه",
         "rectangle" to "مستطیل",
         "circle" to "دایره",
         "dxf_outline" to "خط DXF",
@@ -247,6 +259,8 @@ object DesktopStrings {
         "speed_hint" to "مقادیر جدول برای فایبر لیزر حدود ۶ کیلووات است؛ برای زمان دقیق، سرعت دستگاه خودتان را وارد کنید.",
         "pierce_time" to "زمان پیرس (ثانیه، ۰ = خودکار)",
         "price_kg" to "قیمت هر کیلو ورق (۰ = غیرفعال)",
+        "machine_rate" to "نرخ دستگاه در دقیقه (۰ = غیرفعال)",
+        "pierce_cost" to "هزینه هر سوراخ‌کاری (۰ = غیرفعال)",
         "language" to "زبان",
         "lang_fa" to "فارسی",
         "lang_en" to "English",
@@ -266,6 +280,8 @@ object DesktopStrings {
         "kpi_weight" to "وزن قطعات",
         "kpi_scrap" to "ضایعات",
         "kpi_cost" to "هزینه مواد",
+        "kpi_price" to "قیمت کل",
+        "kpi_travel" to "مسیر لیزر",
         "waste" to "ضایعات",
         "sheet_tab" to "ورق",
         "remnant" to "باقیمانده",
@@ -521,6 +537,8 @@ class DesktopState {
                         sheetMaterial = s.sheetMaterial,
                         sheetThicknessMm = s.sheetThicknessMm,
                         pricePerKg = s.pricePerKg,
+                        machineRatePerMinute = s.machineRatePerMinute,
+                        pierceCost = s.pierceCost,
                         pierceSeconds = s.pierceSeconds
                     )
                 )
@@ -634,6 +652,8 @@ class DesktopState {
                 "autoSpeed" to Json.bool(s.autoSpeed),
                 "pierceSeconds" to Json.num(s.pierceSeconds),
                 "pricePerKg" to Json.num(s.pricePerKg),
+                "machineRatePerMinute" to Json.num(s.machineRatePerMinute),
+                "pierceCost" to Json.num(s.pierceCost),
                 "quality" to Json.str(s.quality),
                 "trueShape" to Json.bool(s.trueShape),
                 "language" to Json.str(s.language),
@@ -674,6 +694,8 @@ class DesktopState {
                     autoSpeed = settingsObj.bool("autoSpeed") ?: true,
                     pierceSeconds = settingsObj.double("pierceSeconds") ?: 0.0,
                     pricePerKg = settingsObj.double("pricePerKg") ?: 0.0,
+                    machineRatePerMinute = settingsObj.double("machineRatePerMinute") ?: 0.0,
+                    pierceCost = settingsObj.double("pierceCost") ?: 0.0,
                     quality = settingsObj.string("quality") ?: "BALANCED",
                     trueShape = settingsObj.bool("trueShape") ?: true,
                     // Language and theme are per-user preferences, not part of a project.
