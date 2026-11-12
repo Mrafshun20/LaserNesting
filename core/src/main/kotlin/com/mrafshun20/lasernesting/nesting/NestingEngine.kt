@@ -486,7 +486,11 @@ object NestingEngine {
      */
     fun allowedAngles(part: PartInput, allowRotationGlobal: Boolean): List<Int> {
         if (!allowRotationGlobal) return listOf(0)
-        val allowed = part.allowedRotations.intersect(ALL_ROTATIONS)
+        // Parts saved before diagonal rotations existed carry the old
+        // 4-angle default; upgrade them to the full set so a saved job
+        // nests diagonally too (a user-picked custom set is respected).
+        val saved = if (part.allowedRotations == setOf(0, 90, 180, 270)) ALL_ROTATIONS else part.allowedRotations
+        val allowed = saved.intersect(ALL_ROTATIONS)
         if (allowed.isEmpty()) return listOf(0)
         return listOf(0, 45, 90, 135, 180, 225, 270, 315).filter { it in allowed }
     }
