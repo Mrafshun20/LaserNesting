@@ -563,7 +563,6 @@ fun ResultsScreen(viewModel: NestingViewModel) {
     }
 }
 
-@Composable
 /**
  * One tinted stat tile in the summary card: small label on top, large
  * value below. The price tile is primary-tinted so the money figure
