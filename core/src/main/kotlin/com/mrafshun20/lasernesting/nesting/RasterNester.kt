@@ -338,7 +338,7 @@ internal class Layout(
     val unplacedCounts: Map<Long, Int>
 )
 
-internal enum class RasterScore { TOP_EDGE, FIRST_FIT, CENTROID }
+internal enum class RasterScore { TOP_EDGE, FIRST_FIT }
 
 internal object RasterNester {
 
@@ -368,11 +368,6 @@ internal object RasterNester {
         val grids = List(sheetCount) { SheetGrid(cols, rows) }
         val placed = List(sheetCount) { mutableListOf<PlacedPart>() }
         val unplaced = HashMap<Long, Int>()
-        // Placed-mass centroid per sheet (sum of placed part bbox centres + count),
-        // so CENTROID scoring can cluster new parts against the mass already down.
-        val massX = DoubleArray(sheetCount)
-        val massY = DoubleArray(sheetCount)
-        val massCount = IntArray(sheetCount)
 
         for (item in items) {
             if (System.nanoTime() > deadlineNanos) return null
@@ -394,19 +389,6 @@ internal object RasterNester {
                     val s = when (score) {
                         RasterScore.TOP_EDGE -> (pos[1] * cell + mask.heightMm) * 100000.0 + pos[0] * cell
                         RasterScore.FIRST_FIT -> pos[1].toDouble() * 100000.0 + pos[0]
-                        RasterScore.CENTROID -> {
-                            val cx = pos[0] * cell + mask.widthMm / 2.0
-                            val cy = pos[1] * cell + mask.heightMm / 2.0
-                            if (massCount[si] == 0) {
-                                cy * 100000.0 + cx
-                            } else {
-                                val mx = massX[si] / massCount[si]
-                                val my = massY[si] / massCount[si]
-                                val dx = cx - mx
-                                val dy = cy - my
-                                dx * dx + dy * dy
-                            }
-                        }
                     }
                     if (s < bestScore) {
                         bestScore = s
@@ -417,9 +399,6 @@ internal object RasterNester {
                 }
                 val m = bestMask ?: continue
                 grids[si].place(m, bestGx, bestGy)
-                massX[si] += bestGx * cell + m.widthMm / 2.0
-                massY[si] += bestGy * cell + m.heightMm / 2.0
-                massCount[si]++
                 val (pw, ph) = OutlineGeometry.rotatedSize(part.widthMm, part.heightMm, m.angle)
                 val shapeIsCircle = part.shape == PartShape.CIRCLE
                 placed[si].add(

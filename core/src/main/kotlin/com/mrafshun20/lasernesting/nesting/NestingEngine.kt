@@ -276,7 +276,6 @@ object NestingEngine {
             val padCells = kotlin.math.ceil(reach / cell).toInt() + 1
             val masks = HashMap<Long, PartMask>()
             val passes = listOf(
-                Triple("raster-area-centroid", areaDesc, RasterScore.CENTROID),
                 Triple("raster-area-top", areaDesc, RasterScore.TOP_EDGE),
                 Triple("raster-long-top", longSideDesc, RasterScore.TOP_EDGE),
                 Triple("raster-area-first", areaDesc, RasterScore.FIRST_FIT),
