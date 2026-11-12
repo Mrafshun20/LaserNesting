@@ -1,6 +1,7 @@
 package com.mrafshun20.lasernesting
 
 import android.os.Bundle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedContent
@@ -35,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -64,6 +66,17 @@ class MainActivity : AppCompatActivity() {
                         .getInstance(application)
                 )
                 var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+                // The last main tab (Parts/Nest), so Back from the
+                // Settings screen returns there instead of exiting.
+                var lastMainTab by rememberSaveable { mutableIntStateOf(0) }
+                LaunchedEffect(selectedTab) {
+                    if (selectedTab == 0 || selectedTab == 1) {
+                        lastMainTab = selectedTab
+                    }
+                }
+                BackHandler(enabled = selectedTab == 2) {
+                    selectedTab = lastMainTab
+                }
 
                 Scaffold(
                     topBar = {

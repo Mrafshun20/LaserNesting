@@ -54,6 +54,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,6 +64,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -90,6 +92,7 @@ import com.mrafshun20.lasernesting.data.PartShape
 import com.mrafshun20.lasernesting.ui.theme.SheetBackground
 import com.mrafshun20.lasernesting.ui.theme.partColor
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Parts library — the list of parts to cut, with DXF import and edit /
@@ -112,6 +115,21 @@ fun PartsScreen(viewModel: NestingViewModel) {
         if (dxfMessage != null) {
             snackbarHostState.showSnackbar(dxfMessage)
             viewModel.clearDxfImportMessage()
+        }
+    }
+    // Delete offers Undo: a part (with its DXF outline) is too easy to
+    // lose to a mistap, and there is no other way to get it back.
+    val scope = rememberCoroutineScope()
+    val deleteWithUndo = { part: PartEntity ->
+        viewModel.deletePart(part)
+        scope.launch {
+            val outcome = snackbarHostState.showSnackbar(
+                message = context.getString(R.string.part_deleted),
+                actionLabel = context.getString(R.string.action_undo)
+            )
+            if (outcome == SnackbarResult.ActionPerformed) {
+                viewModel.upsertPart(part)
+            }
         }
     }
 
@@ -201,7 +219,7 @@ fun PartsScreen(viewModel: NestingViewModel) {
                         part = part,
                         color = partColor(index),
                         onEdit = { editingPart = part },
-                        onDelete = { viewModel.deletePart(part) },
+                        onDelete = { deleteWithUndo(part) },
                         onQuantityChange = { quantity ->
                             viewModel.setPartQuantity(part, quantity)
                         },

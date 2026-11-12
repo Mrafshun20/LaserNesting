@@ -28,6 +28,8 @@
     <string name="part_quantity_increase">زیاد کردن تعداد</string>
     <string name="part_duplicate">کپی کردن قطعه</string>
     <string name="part_delete">حذف قطعه</string>
+    <string name="part_deleted">قطعه حذف شد</string>
+    <string name="action_undo">بازگردانی</string>
     <string name="action_settings">تنظیمات</string>
     <string name="time_hour">ساعت</string>
     <string name="time_min">دقیقه</string>
@@ -90,6 +92,8 @@
     <string name="nest_share_csv">اشتراک لیست برش</string>
     <string name="nest_share_svg">اشتراک نقشه چیدمان</string>
     <string name="nest_no_parts">اول حداقل یک قطعه اضافه کنید.</string>
+    <string name="nest_no_parts_title">هنوز قطعه‌ای نیست</string>
+    <string name="nest_no_parts_body">اول از تب قطعات یک فایل DXF وارد کنید — بعد اینجا چینش را اجرا کنید.</string>
     <string name="nest_sheet_zero">اندازه ورق باید بزرگ‌تر از صفر باشد.</string>
     <string name="nest_sheet_count_min">تعداد ورق باید حداقل ۱ باشد.</string>
     <string name="nest_sheet_too_big">ورق (%1$s در %2$s میلی‌متر) از ناحیه کاری %3$s بزرگ‌تر است (%4$s در %5$s میلی‌متر). ورق کوچک‌تر یا دستگاه دیگری انتخاب کنید.</string>
@@ -98,7 +102,7 @@
     <string name="nest_zoom_out">کوچک‌نمایی</string>
     <string name="nest_zoom_fit">نمایش کامل</string>
     <string name="nest_zoom_close">بستن</string>
-    <string name="nest_zoom_hint">با دو انگشت بزرگ و کوچک کنید • برای جابه‌جایی بکشید</string>
+    <string name="nest_zoom_hint">با دو انگشت بزرگ و کوچک کنید • برای جابه‌جایی بکشید • دوبار بزنید تا بزرگ شود</string>
 
     <string name="dxf_imported">%1$d قطعه از %2$s وارد شد.</string>
     <string name="dxf_no_parts">در این فایل DXF هیچ قطعه بسته‌ای پیدا نشد.</string>

@@ -1,12 +1,15 @@
 package com.mrafshun20.lasernesting.ui
 
+import android.os.SystemClock
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,7 +55,9 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,15 +69,21 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlin.math.exp
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import com.mrafshun20.lasernesting.R
 import com.mrafshun20.lasernesting.data.PartShape
 import com.mrafshun20.lasernesting.export.Export
@@ -94,6 +105,7 @@ fun ResultsScreen(viewModel: NestingViewModel) {
     val error = viewModel.nestError
     val isNesting = viewModel.isNesting
     val settings by viewModel.settings.collectAsState()
+    val parts by viewModel.parts.collectAsState()
     val context = LocalContext.current
     var selectedSheet by remember(result) { mutableIntStateOf(0) }
     var showFullscreen by remember(result) { mutableStateOf(false) }
@@ -130,7 +142,33 @@ fun ResultsScreen(viewModel: NestingViewModel) {
             )
         }
 
-        if (error != null) {
+        // No parts yet is a normal first-run state, not an error: a
+        // friendly empty state instead of a red error card.
+        if (parts.isEmpty()) {
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.nest_no_parts_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = stringResource(R.string.nest_no_parts_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else if (error != null) {
             Card(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer
@@ -561,11 +599,12 @@ private fun clampSheetOffset(offset: Offset, scale: Float, size: IntSize): Offse
 
 /**
  * Full-screen view of one nest sheet: the same vector sheet drawing,
- * pinch-zoomable (1x–8x) and draggable, so the layout can be inspected
- * precisely. The zoom is applied with graphicsLayer on the vector
- * Canvas, so the drawing stays sharp. Buttons cover zoom in/out and
- * fit-to-screen for users who cannot pinch; the zoom percentage is
- * shown in the top bar.
+ * with the standard image-viewer gestures — pinch to zoom around the
+ * pinch point, one-finger drag to pan 1:1 with the finger at any zoom,
+ * double-tap to zoom in/out, and fling with inertia after a drag.
+ * The zoom is applied with graphicsLayer on the vector Canvas, so the
+ * drawing stays sharp. Buttons cover zoom in/out and fit-to-screen for
+ * users who cannot pinch; the zoom percentage is shown in the top bar.
  */
 @Composable
 private fun FullscreenSheetView(
@@ -578,27 +617,54 @@ private fun FullscreenSheetView(
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var viewportSize by remember { mutableStateOf(IntSize.Zero) }
+    val scope = rememberCoroutineScope()
+    // The running fling / zoom animation, so a new gesture or button
+    // press can cancel it at once instead of fighting it.
+    var animJob by remember { mutableStateOf<Job?>(null) }
+
+    fun clamp(offset: Offset, scale: Float): Offset =
+        clampSheetOffset(offset, scale, viewportSize)
+
+    // Smoothly animate to a scale/offset — used by the zoom buttons and
+    // double-tap, so the view glides instead of jumping.
+    fun animateZoomTo(targetScale: Float, targetOffset: Offset) {
+        animJob?.cancel()
+        val startScale = scale
+        val startOffset = offset
+        val endOffset = clamp(targetOffset, targetScale)
+        animJob = scope.launch {
+            animate(0f, 1f, animationSpec = tween(250)) { f, _ ->
+                scale = lerp(startScale, targetScale, f)
+                offset = lerp(startOffset, endOffset, f)
+            }
+        }
+    }
+
     val reset = {
+        animJob?.cancel()
+        animJob = null
         scale = 1f
         offset = Offset.Zero
     }
     val zoomBy = { factor: Float ->
         val newScale = (scale * factor).coerceIn(1f, 8f)
-        scale = newScale
-        offset = if (newScale <= 1f) {
-            Offset.Zero
-        } else {
-            clampSheetOffset(offset, newScale, viewportSize)
-        }
+        animateZoomTo(newScale, offset)
     }
-    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
-        val newScale = (scale * zoomChange).coerceIn(1f, 8f)
-        scale = newScale
-        offset = if (newScale <= 1f) {
+    // Double-tap toggles between fit (1x) and 3x, centred on the tap
+    // point — the standard image-viewer behaviour. The tap is in
+    // viewport coordinates (top-left origin) while the offset is a
+    // translation from the centred position, so the tap is first made
+    // relative to the viewport centre.
+    val onDoubleTap = { tap: Offset ->
+        val targetScale = if (scale < 2f) 3f else 1f
+        val targetOffset = if (targetScale <= 1f) {
             Offset.Zero
         } else {
-            clampSheetOffset(offset + panChange, newScale, viewportSize)
+            val center = Offset(viewportSize.width / 2f, viewportSize.height / 2f)
+            val rel = tap - center
+            rel + (offset - rel) * (targetScale / scale)
         }
+        animateZoomTo(targetScale, targetOffset)
     }
 
     Box(
@@ -663,9 +729,66 @@ private fun FullscreenSheetView(
                     .weight(1f)
                     .fillMaxWidth()
                     .onSizeChanged { viewportSize = it }
-                    // Gestures on the whole viewport (not just the sheet):
-                    // a one-finger drag anywhere pans, a pinch anywhere zooms.
-                    .transformable(transformState),
+                    // Double-tap to zoom in/out, centred on the tap.
+                    .pointerInput(Unit) {
+                        detectTapGestures(onDoubleTap = { tap -> onDoubleTap(tap) })
+                    }
+                    // Pinch + pan + fling. The gestures run on this
+                    // unscaled viewport (not on the scaled sheet), so the
+                    // pan is 1:1 with the finger at any zoom — the drag
+                    // is never divided by the zoom level. The pinch zooms
+                    // around the pinch centroid, so the point under the
+                    // fingers stays put, like Google Maps. When the
+                    // gesture ends, the sheet keeps gliding with inertia.
+                    .pointerInput(Unit) {
+                        while (true) {
+                            animJob?.cancel()
+                            animJob = null
+                            val tracker = VelocityTracker()
+                            detectTransformGestures { centroid, pan, zoom, _ ->
+                                tracker.addPosition(
+                                    SystemClock.uptimeMillis(), centroid
+                                )
+                                val oldScale = scale
+                                val newScale = (oldScale * zoom).coerceIn(1f, 8f)
+                                val factor = newScale / oldScale
+                                // Zoom around the pinch centroid, so the
+                                // point under the fingers stays put. The
+                                // centroid is in viewport coordinates
+                                // (top-left origin); the offset is a
+                                // translation from the centred position,
+                                // so the centroid is made relative to
+                                // the viewport centre first.
+                                val center = Offset(
+                                    viewportSize.width / 2f,
+                                    viewportSize.height / 2f
+                                )
+                                val rel = centroid - center
+                                val zoomed = rel + (offset - rel) * factor
+                                offset = clamp(zoomed + pan, newScale)
+                                scale = newScale
+                            }
+                            val velocity = tracker.calculateVelocity()
+                            if (scale > 1f && velocity.getDistance() > 100f) {
+                                animJob = scope.launch {
+                                    var v = velocity
+                                    var last = withFrameNanos { it }
+                                    while (v.getDistance() > 20f) {
+                                        val now = withFrameNanos { it }
+                                        val dt = ((now - last) / 1_000_000_000f)
+                                            .coerceIn(0f, 0.05f)
+                                        last = now
+                                        v *= exp(-dt * 4.2f)
+                                        val unclamped = offset + Offset(v.x * dt, v.y * dt)
+                                        val clamped = clamp(unclamped, scale)
+                                        if (clamped.x != unclamped.x) v = v.copy(x = 0f)
+                                        if (clamped.y != unclamped.y) v = v.copy(y = 0f)
+                                        offset = clamped
+                                    }
+                                }
+                            }
+                        }
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 SheetCanvas(

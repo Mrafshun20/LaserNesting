@@ -50,15 +50,39 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
         private set
 
     init {
-        // Persian is the default language. Installs that stored the old
-        // "system" default are migrated to Persian once, so the app opens
-        // in Persian unless the user explicitly picks English.
+        // Persian is the default language. On every launch the stored
+        // language is applied as the per-app locale, so the app always
+        // opens in the picked language — a fresh install is Persian even
+        // on an English device. Installs that stored the old "system"
+        // default are migrated to Persian once.
         viewModelScope.launch {
             val current = withContext(Dispatchers.IO) { repository.getSettings() }
+            val code = if (current.language == "system") "fa" else current.language
             if (current.language == "system") {
-                setLanguage("fa")
+                withContext(Dispatchers.IO) {
+                    repository.updateSettings(current.copy(language = "fa"))
+                }
             }
+            applyAppLocale(code)
         }
+    }
+
+    /** Applies a language code ("fa" or "en") as the per-app locale. */
+    private fun applyAppLocale(code: String) {
+        val locales = when (code) {
+            "en" -> LocaleListCompat.forLanguageTags("en")
+            else -> LocaleListCompat.forLanguageTags("fa")
+        }
+        AppCompatDelegate.setApplicationLocales(locales)
+    }
+
+    /**
+     * Clears the cached nest result (and error) so the Results screen
+     * re-nests with fresh inputs instead of showing a stale layout.
+     */
+    fun clearResult() {
+        nestResult = null
+        nestError = null
     }
 
     /** Result of the last DXF import: how many parts landed, plus warnings. */
@@ -66,6 +90,7 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
         private set
 
     fun upsertPart(part: PartEntity) {
+        clearResult()
         viewModelScope.launch(Dispatchers.IO) { repository.upsertPart(part) }
     }
 
@@ -85,10 +110,15 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun deletePart(part: PartEntity) {
+        clearResult()
         viewModelScope.launch(Dispatchers.IO) { repository.deletePart(part) }
     }
 
-    fun updateSettings(transform: (SettingsEntity) -> SettingsEntity) {
+    fun updateSettings(
+        invalidateNest: Boolean = true,
+        transform: (SettingsEntity) -> SettingsEntity
+    ) {
+        if (invalidateNest) clearResult()
         viewModelScope.launch(Dispatchers.IO) {
             val current = repository.getSettings()
             repository.updateSettings(transform(current))
@@ -96,22 +126,15 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /**
-     * Applies the app language. "system" follows the device, "en" is
-     * English, "fa" is Persian. Persisted in settings and applied via
-     * AppCompat's per-app locale, which survives restarts.
+     * Applies the app language. Only "fa" (Persian, the default) and
+     * "en" (English) exist — anything else falls back to Persian.
+     * Persisted in settings and applied via AppCompat's per-app locale,
+     * which survives restarts.
      */
     fun setLanguage(language: String) {
-        val code = when (language) {
-            "en", "fa" -> language
-            else -> "system"
-        }
-        updateSettings { it.copy(language = code) }
-        val locales = when (code) {
-            "en" -> LocaleListCompat.forLanguageTags("en")
-            "fa" -> LocaleListCompat.forLanguageTags("fa")
-            else -> LocaleListCompat.getEmptyLocaleList()
-        }
-        AppCompatDelegate.setApplicationLocales(locales)
+        val code = if (language == "en") "en" else "fa"
+        updateSettings(invalidateNest = false) { it.copy(language = code) }
+        applyAppLocale(code)
     }
 
     /**
@@ -157,6 +180,7 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
             val imported = withContext(Dispatchers.IO) {
                 repository.insertParts(entities).size
             }
+            clearResult()
             dxfImportMessage = if (result.warnings.isEmpty()) {
                 app.getString(R.string.dxf_imported, imported, fileName)
             } else {
@@ -239,10 +263,5 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
             nestResult = result
             isNesting = false
         }
-    }
-
-    fun clearResult() {
-        nestResult = null
-        nestError = null
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -1667,6 +1668,23 @@ private fun DesktopZoomableSheet(
             clampSheetOffset(offset, newScale, viewportSize)
         }
     }
+    // Zoom around a viewport point (the mouse cursor for the wheel,
+    // the click point for double-click) so the point under the cursor
+    // stays put, instead of zooming toward the centre.
+    val zoomAt = { cursor: Offset, factor: Float ->
+        val oldScale = scale
+        val newScale = (oldScale * factor).coerceIn(1f, 8f)
+        val center = Offset(viewportSize.width / 2f, viewportSize.height / 2f)
+        val rel = cursor - center
+        val f = newScale / oldScale
+        val newOffset = rel + (offset - rel) * f
+        scale = newScale
+        offset = if (newScale <= 1f) {
+            Offset.Zero
+        } else {
+            clampSheetOffset(newOffset, newScale, viewportSize)
+        }
+    }
 
     Column {
         Row(
@@ -1693,7 +1711,35 @@ private fun DesktopZoomableSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .onSizeChanged { viewportSize = it },
+                .onSizeChanged { viewportSize = it }
+                // Gestures on this unscaled viewport (not on the scaled
+                // sheet), so a drag moves 1:1 with the mouse at any zoom
+                // and the wheel position is in viewport coordinates.
+                .pointerInput(Unit) {
+                    detectDragGestures { _, dragAmount ->
+                        if (scale > 1f) {
+                            offset = clampSheetOffset(
+                                offset + dragAmount, scale, viewportSize
+                            )
+                        }
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures(onDoubleTap = { tap ->
+                        if (scale < 2f) zoomAt(tap, 3f / scale) else reset()
+                    })
+                }
+                .onPointerEvent(PointerEventType.Scroll) { event ->
+                    val change = event.changes.firstOrNull()
+                    val delta = change?.scrollDelta ?: Offset.Zero
+                    if (delta.y != 0f && change != null) {
+                        zoomAt(
+                            change.position,
+                            if (delta.y < 0f) 1.15f else 1f / 1.15f
+                        )
+                    }
+                    event.changes.forEach { it.consume() }
+                },
             contentAlignment = Alignment.Center
         ) {
             SheetCamViewport(
@@ -1713,23 +1759,6 @@ private fun DesktopZoomableSheet(
                         translationX = offset.x,
                         translationY = offset.y
                     )
-                    .pointerInput(Unit) {
-                        detectDragGestures { _, dragAmount ->
-                            if (scale > 1f) {
-                                offset = clampSheetOffset(
-                                    offset + dragAmount, scale, viewportSize
-                                )
-                            }
-                        }
-                    }
-                    .onPointerEvent(PointerEventType.Scroll) { event ->
-                        val delta = event.changes.firstOrNull()?.scrollDelta
-                            ?: Offset.Zero
-                        if (delta.y != 0f) {
-                            zoomBy(if (delta.y < 0f) 1.15f else 1f / 1.15f)
-                        }
-                        event.changes.forEach { it.consume() }
-                    }
             )
         }
         Text(

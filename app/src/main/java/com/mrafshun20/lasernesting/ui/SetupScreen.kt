@@ -75,20 +75,18 @@ fun SetupScreen(viewModel: NestingViewModel) {
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Persian is the default; English is an explicit choice.
+                // There is no "follow the device" option — the app always
+                // opens in the language picked here.
                 FilterChip(
-                    selected = settings.language == "system",
-                    onClick = { viewModel.setLanguage("system") },
-                    label = { Text(stringResource(R.string.setup_language_system)) }
+                    selected = settings.language == "fa",
+                    onClick = { viewModel.setLanguage("fa") },
+                    label = { Text(stringResource(R.string.setup_language_fa)) }
                 )
                 FilterChip(
                     selected = settings.language == "en",
                     onClick = { viewModel.setLanguage("en") },
                     label = { Text(stringResource(R.string.setup_language_en)) }
-                )
-                FilterChip(
-                    selected = settings.language == "fa",
-                    onClick = { viewModel.setLanguage("fa") },
-                    label = { Text(stringResource(R.string.setup_language_fa)) }
                 )
             }
         }
