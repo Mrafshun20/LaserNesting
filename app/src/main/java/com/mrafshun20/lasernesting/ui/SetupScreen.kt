@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mrafshun20.lasernesting.R
+import com.mrafshun20.lasernesting.data.CutGas
 import com.mrafshun20.lasernesting.data.MachinePreset
 import com.mrafshun20.lasernesting.data.Material
 import com.mrafshun20.lasernesting.data.SheetPreset
@@ -216,6 +217,14 @@ fun SetupScreen(viewModel: NestingViewModel) {
                     )
                 }
             }
+            // The assist gas decides the per-metre cutting rate, so it
+            // is shown right under the material choice.
+            Text(
+                text = stringResource(R.string.setup_cut_gas) + ": " +
+                    CutGas.forMaterial(settings.sheetMaterial, settings.sheetThicknessMm),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             DecimalField(
                 label = stringResource(R.string.setup_sheet_thickness),
                 value = settings.sheetThicknessMm,
@@ -289,18 +298,13 @@ fun SetupScreen(viewModel: NestingViewModel) {
         }
 
         SectionCard(icon = Icons.Filled.AttachMoney, title = stringResource(R.string.setup_pricing)) {
+            // Cutting fee first: laser cutting is priced per metre of
+            // cut. The sheet price per kg is only the material cost.
             DecimalField(
-                label = stringResource(R.string.setup_price_per_kg),
-                value = settings.pricePerKg,
+                label = stringResource(R.string.setup_cut_price_per_meter),
+                value = settings.cutPricePerMeter,
                 onValueChange = { value ->
-                    viewModel.updateSettings { it.copy(pricePerKg = value) }
-                }
-            )
-            DecimalField(
-                label = stringResource(R.string.setup_machine_rate),
-                value = settings.machineRatePerMinute,
-                onValueChange = { value ->
-                    viewModel.updateSettings { it.copy(machineRatePerMinute = value) }
+                    viewModel.updateSettings { it.copy(cutPricePerMeter = value) }
                 }
             )
             DecimalField(
@@ -308,6 +312,13 @@ fun SetupScreen(viewModel: NestingViewModel) {
                 value = settings.pierceCost,
                 onValueChange = { value ->
                     viewModel.updateSettings { it.copy(pierceCost = value) }
+                }
+            )
+            DecimalField(
+                label = stringResource(R.string.setup_price_per_kg),
+                value = settings.pricePerKg,
+                onValueChange = { value ->
+                    viewModel.updateSettings { it.copy(pricePerKg = value) }
                 }
             )
         }

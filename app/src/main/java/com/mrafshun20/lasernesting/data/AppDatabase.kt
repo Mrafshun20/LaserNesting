@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [PartEntity::class, SettingsEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -38,6 +38,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v3 -> v4: cutting priced per metre of cut (cutPricePerMeter). */
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE settings ADD COLUMN cutPricePerMeter REAL NOT NULL DEFAULT 0.0"
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -45,10 +54,10 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "laser_nesting.db"
                 )
-                    .addMigrations(MIGRATION_2_3)
+                    .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
                     // The destructive fallback stays only as a safety net
-                    // for unknown jumps; the 2 -> 3 step above is the real
-                    // migration and keeps the user's parts and settings.
+                    // for unknown jumps; the steps above are the real
+                    // migrations and keep the user's parts and settings.
                     .fallbackToDestructiveMigration()
                     .build().also { INSTANCE = it }
             }

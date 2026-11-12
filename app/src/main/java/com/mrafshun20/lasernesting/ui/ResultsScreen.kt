@@ -80,6 +80,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
@@ -91,11 +92,13 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import com.mrafshun20.lasernesting.R
+import com.mrafshun20.lasernesting.data.CutGas
 import com.mrafshun20.lasernesting.data.PartShape
 import com.mrafshun20.lasernesting.export.Export
 import com.mrafshun20.lasernesting.nesting.NestSheet
 import com.mrafshun20.lasernesting.nesting.NestingEngine
 import com.mrafshun20.lasernesting.nesting.PlacedPart
+import com.mrafshun20.lasernesting.ui.theme.DarkSurfaceVariant
 import com.mrafshun20.lasernesting.ui.theme.MutedRemnant
 import com.mrafshun20.lasernesting.ui.theme.SheetBackground
 import com.mrafshun20.lasernesting.ui.theme.partColor
@@ -210,6 +213,9 @@ fun ResultsScreen(viewModel: NestingViewModel) {
             val totalSheetAreaM2 = r.sheetsUsed * sheetAreaM2
             val wastePercent = 100.0 - r.overallUtilizationPercent
             val wasteAreaM2 = totalSheetAreaM2 * wastePercent / 100.0
+            val money: (Double) -> String = { v ->
+                if (v > 0) String.format(Locale.US, "%,.0f", v) else "—"
+            }
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -223,8 +229,9 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Gradient header band: primary fading into its
-                    // container, with the utilization number large and bold.
+                    // Hero band: dark slate gradient into the primary
+                    // container, with the utilization number large, bold
+                    // and light — the first thing the eye lands on.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -232,24 +239,25 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                             .background(
                                 Brush.horizontalGradient(
                                     listOf(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+                                        DarkSurfaceVariant,
                                         MaterialTheme.colorScheme.primaryContainer
                                     )
                                 )
                             )
-                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                            .padding(horizontal = 16.dp, vertical = 14.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = stringResource(R.string.nest_utilization),
                                 style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
                                 text = "%.1f%%".format(Locale.US, r.overallUtilizationPercent),
                                 style = MaterialTheme.typography.headlineLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                     }
@@ -257,8 +265,8 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                         progress = { (r.overallUtilizationPercent / 100.0).toFloat() },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
+                            .height(10.dp)
+                            .clip(RoundedCornerShape(5.dp)),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     )
@@ -269,25 +277,38 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    // Material, thickness and the assist gas that decides
+                    // the per-metre cutting rate.
+                    Text(
+                        text = settings.sheetMaterial.localizedName() + " " +
+                            formatMm(settings.sheetThicknessMm) + " mm • " +
+                            stringResource(R.string.setup_cut_gas) + ": " +
+                            CutGas.forMaterial(
+                                settings.sheetMaterial, settings.sheetThicknessMm
+                            ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    // Six tinted tiles: sheets / cut length / time, then
+                    // placed / price / laser travel. The price tile is
+                    // primary-tinted so the money figure stands out.
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            MiniStat(
+                            StatTile(
                                 label = stringResource(R.string.nest_sheets),
                                 value = "${r.sheetsUsed}",
                                 modifier = Modifier.weight(1f)
                             )
-                            StatDivider()
-                            MiniStat(
+                            StatTile(
                                 label = stringResource(R.string.nest_cut_length),
                                 value = "%.1f m".format(Locale.US, r.totalCutLengthMm / 1000.0),
                                 modifier = Modifier.weight(1f)
                             )
-                            StatDivider()
-                            MiniStat(
+                            StatTile(
                                 label = stringResource(R.string.nest_est_time),
                                 value = formatMinutes(
                                     r.estimatedCutMinutes,
@@ -299,31 +320,38 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            MiniStat(
+                            StatTile(
                                 label = stringResource(R.string.nest_placed),
                                 value = "${r.totalPartsPlaced}/${r.totalPartsRequested}",
                                 modifier = Modifier.weight(1f)
                             )
-                            StatDivider()
-                            MiniStat(
+                            StatTile(
                                 label = stringResource(R.string.nest_price),
-                                value = if (r.totalCost > 0) {
-                                    String.format(Locale.US, "%,.0f", r.totalCost)
-                                } else {
-                                    "—"
-                                },
-                                modifier = Modifier.weight(1f)
+                                value = money(r.totalCost),
+                                modifier = Modifier.weight(1f),
+                                highlighted = true
                             )
-                            StatDivider()
-                            MiniStat(
+                            StatTile(
                                 label = stringResource(R.string.nest_laser_travel),
                                 value = "%.1f m".format(Locale.US, r.totalTravelMm / 1000.0),
                                 modifier = Modifier.weight(1f)
                             )
                         }
                     }
+                    // Price breakdown: the per-metre cutting fee is what
+                    // drives the price, shown next to pierces and sheet.
+                    Text(
+                        text = stringResource(
+                            R.string.nest_price_breakdown,
+                            money(r.cuttingCost),
+                            money(r.pierceCostTotal),
+                            money(r.materialCost)
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
@@ -536,31 +564,55 @@ fun ResultsScreen(viewModel: NestingViewModel) {
 }
 
 @Composable
-private fun MiniStat(label: String, value: String, modifier: Modifier = Modifier) {
+/**
+ * One tinted stat tile in the summary card: small label on top, large
+ * value below. The price tile is primary-tinted so the money figure
+ * stands out from the rest.
+ */
+@Composable
+private fun StatTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    highlighted: Boolean = false
+) {
     Column(
-        modifier = modifier,
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (highlighted) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                }
+            )
+            .padding(horizontal = 8.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium
-        )
-        Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (highlighted) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = if (highlighted) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
-}
-
-@Composable
-private fun StatDivider() {
-    Box(
-        modifier = Modifier
-            .width(1.dp)
-            .height(36.dp)
-            .background(MaterialTheme.colorScheme.outlineVariant)
-    )
 }
 
 @Composable
@@ -873,15 +925,6 @@ private fun FullscreenSheetView(
                         )
                 )
             }
-            Text(
-                text = stringResource(R.string.nest_zoom_hint),
-                color = Color.White.copy(alpha = 0.7f),
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            )
         }
     }
 }

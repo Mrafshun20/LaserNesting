@@ -43,8 +43,14 @@ data class DesktopSettings(
     val pierceSeconds: Double = 0.0,
     /** Sheet price per kg; 0 = no cost figure. */
     val pricePerKg: Double = 0.0,
-    /** Laser machine rate per cutting minute; 0 = no time cost figure. */
+    /**
+     * Deprecated: cutting is priced per metre of cut now
+     * ([cutPricePerMeter]); kept only so old project files still load.
+     * Nothing reads this any more.
+     */
     val machineRatePerMinute: Double = 0.0,
+    /** Laser cutting fee: price of one metre of cut; 0 = no cutting fee figure. */
+    val cutPricePerMeter: Double = 0.0,
     /** Cost of one pierce; 0 = no pierce cost figure. */
     val pierceCost: Double = 0.0,
     /** FAST, BALANCED or HIGH. */
@@ -126,8 +132,14 @@ object DesktopStrings {
         "speed_hint" to "Table values are typical for a ~6 kW fiber laser — set your own speed for exact times.",
         "pierce_time" to "Pierce time (s, 0 = automatic)",
         "price_kg" to "Sheet price per kg (0 = off)",
-        "machine_rate" to "Machine rate per min (0 = off)",
+        "cut_price_meter" to "Cut price per meter (0 = off)",
         "pierce_cost" to "Cost per pierce (0 = off)",
+        "gas" to "Cutting gas",
+        "gas_oxygen" to "Oxygen (O2)",
+        "gas_nitrogen" to "Nitrogen (N2)",
+        "bd_cut" to "Cutting",
+        "bd_pierce" to "Piercing",
+        "bd_sheet" to "Sheet",
         "language" to "Language",
         "lang_fa" to "فارسی",
         "lang_en" to "English",
@@ -157,7 +169,6 @@ object DesktopStrings {
         "zoom_in" to "Zoom in",
         "zoom_out" to "Zoom out",
         "zoom_fit" to "Fit",
-        "zoom_hint" to "Scroll to zoom • drag to pan",
         "export" to "Export",
         "export_dxf" to "DXF for Bystronic (this sheet)",
         "export_dxf_all" to "DXF of all sheets…",
@@ -259,8 +270,14 @@ object DesktopStrings {
         "speed_hint" to "مقادیر جدول برای فایبر لیزر حدود ۶ کیلووات است؛ برای زمان دقیق، سرعت دستگاه خودتان را وارد کنید.",
         "pierce_time" to "زمان پیرس (ثانیه، ۰ = خودکار)",
         "price_kg" to "قیمت هر کیلو ورق (۰ = غیرفعال)",
-        "machine_rate" to "نرخ دستگاه در دقیقه (۰ = غیرفعال)",
+        "cut_price_meter" to "قیمت برش هر متر (۰ = غیرفعال)",
         "pierce_cost" to "هزینه هر سوراخ‌کاری (۰ = غیرفعال)",
+        "gas" to "گاز برش",
+        "gas_oxygen" to "اکسیژن (O2)",
+        "gas_nitrogen" to "نیتروژن (N2)",
+        "bd_cut" to "برش",
+        "bd_pierce" to "سوراخ‌کاری",
+        "bd_sheet" to "ورق",
         "language" to "زبان",
         "lang_fa" to "فارسی",
         "lang_en" to "English",
@@ -290,7 +307,6 @@ object DesktopStrings {
         "zoom_in" to "بزرگ‌نمایی",
         "zoom_out" to "کوچک‌نمایی",
         "zoom_fit" to "نمایش کامل",
-        "zoom_hint" to "اسکرول برای زوم • کشیدن برای جابه‌جایی",
         "export" to "خروجی",
         "export_dxf" to "DXF برای بایسترونیک (این ورق)",
         "export_dxf_all" to "DXF همه ورق‌ها…",
@@ -537,7 +553,7 @@ class DesktopState {
                         sheetMaterial = s.sheetMaterial,
                         sheetThicknessMm = s.sheetThicknessMm,
                         pricePerKg = s.pricePerKg,
-                        machineRatePerMinute = s.machineRatePerMinute,
+                        cutPricePerMeter = s.cutPricePerMeter,
                         pierceCost = s.pierceCost,
                         pierceSeconds = s.pierceSeconds
                     )
@@ -653,6 +669,7 @@ class DesktopState {
                 "pierceSeconds" to Json.num(s.pierceSeconds),
                 "pricePerKg" to Json.num(s.pricePerKg),
                 "machineRatePerMinute" to Json.num(s.machineRatePerMinute),
+                "cutPricePerMeter" to Json.num(s.cutPricePerMeter),
                 "pierceCost" to Json.num(s.pierceCost),
                 "quality" to Json.str(s.quality),
                 "trueShape" to Json.bool(s.trueShape),
@@ -695,6 +712,7 @@ class DesktopState {
                     pierceSeconds = settingsObj.double("pierceSeconds") ?: 0.0,
                     pricePerKg = settingsObj.double("pricePerKg") ?: 0.0,
                     machineRatePerMinute = settingsObj.double("machineRatePerMinute") ?: 0.0,
+                    cutPricePerMeter = settingsObj.double("cutPricePerMeter") ?: 0.0,
                     pierceCost = settingsObj.double("pierceCost") ?: 0.0,
                     quality = settingsObj.string("quality") ?: "BALANCED",
                     trueShape = settingsObj.bool("trueShape") ?: true,

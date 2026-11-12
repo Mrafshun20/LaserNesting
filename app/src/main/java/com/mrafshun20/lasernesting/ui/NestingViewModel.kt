@@ -261,7 +261,7 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
                     cuttingSpeedMmPerMin = s.cuttingSpeedMmPerMin,
                     options = NestOptions(
                         pricePerKg = s.pricePerKg,
-                        machineRatePerMinute = s.machineRatePerMinute,
+                        cutPricePerMeter = s.cutPricePerMeter,
                         pierceCost = s.pierceCost
                     )
                 )

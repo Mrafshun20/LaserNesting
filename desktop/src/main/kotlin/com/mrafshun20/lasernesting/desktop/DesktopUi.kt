@@ -87,6 +87,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+import com.mrafshun20.lasernesting.data.CutGas
+import com.mrafshun20.lasernesting.data.CutGasKind
 import com.mrafshun20.lasernesting.data.MachinePreset
 import com.mrafshun20.lasernesting.data.Material
 import com.mrafshun20.lasernesting.data.PartShape
@@ -1368,17 +1370,10 @@ private fun DesktopSetupContent(state: DesktopState, settings: DesktopSettings) 
                 }
             )
             DecimalField(
-                label = state.t("price_kg"),
-                value = settings.pricePerKg,
+                label = state.t("cut_price_meter"),
+                value = settings.cutPricePerMeter,
                 onValueChange = { v ->
-                    state.updateSettings { it.copy(pricePerKg = v) }
-                }
-            )
-            DecimalField(
-                label = state.t("machine_rate"),
-                value = settings.machineRatePerMinute,
-                onValueChange = { v ->
-                    state.updateSettings { it.copy(machineRatePerMinute = v) }
+                    state.updateSettings { it.copy(cutPricePerMeter = v) }
                 }
             )
             DecimalField(
@@ -1386,6 +1381,13 @@ private fun DesktopSetupContent(state: DesktopState, settings: DesktopSettings) 
                 value = settings.pierceCost,
                 onValueChange = { v ->
                     state.updateSettings { it.copy(pierceCost = v) }
+                }
+            )
+            DecimalField(
+                label = state.t("price_kg"),
+                value = settings.pricePerKg,
+                onValueChange = { v ->
+                    state.updateSettings { it.copy(pricePerKg = v) }
                 }
             )
         }
@@ -1491,6 +1493,25 @@ private fun DesktopNestContent(
                 Ui.Success
             )
         }
+        // Price breakdown: the per-metre cutting fee is what drives the
+        // price, shown next to pierces and sheet cost.
+        val money: (Double) -> String = { v ->
+            if (v > 0) String.format(Locale.US, "%,.0f", v) else "—"
+        }
+        Text(
+            state.t("bd_cut") + ": " + money(nestResult?.cuttingCost ?: 0.0) +
+                " • " + state.t("bd_pierce") + ": " + money(nestResult?.pierceCostTotal ?: 0.0) +
+                " • " + state.t("bd_sheet") + ": " + money(nestResult?.materialCost ?: 0.0),
+            color = Ui.TextSecondary, fontSize = 12.sp
+        )
+        // Assist gas: it decides the per-metre cutting rate.
+        val gasKind = CutGas.kindFor(settings.sheetMaterial, settings.sheetThicknessMm)
+        Text(
+            state.t("gas") + ": " + state.t(
+                if (gasKind == CutGasKind.NITROGEN) "gas_nitrogen" else "gas_oxygen"
+            ),
+            color = Ui.TextSecondary, fontSize = 12.sp
+        )
 
         if (nestError != null) {
             Row(
@@ -1910,12 +1931,6 @@ private fun DesktopZoomableSheet(
                     )
             )
         }
-        Text(
-            text = state.t("zoom_hint"),
-            color = Ui.TextMuted,
-            fontSize = 11.sp,
-            modifier = Modifier.padding(top = 4.dp)
-        )
     }
 }
 

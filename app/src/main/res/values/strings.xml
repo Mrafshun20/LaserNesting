@@ -69,9 +69,10 @@
     <string name="setup_cutting_speed">Cutting speed</string>
     <string name="setup_cutting_note">Cutting time is a rough estimate: total cut length divided by speed.</string>
     <string name="setup_pricing">Pricing</string>
-    <string name="setup_price_per_kg">Price per kg</string>
-    <string name="setup_machine_rate">Machine rate / min</string>
+    <string name="setup_cut_price_per_meter">Cut price per meter</string>
+    <string name="setup_price_per_kg">Sheet price per kg</string>
     <string name="setup_pierce_cost">Cost per pierce</string>
+    <string name="setup_cut_gas">Cutting gas</string>
 
     <string name="nest_run">Auto-nest parts</string>
     <string name="nest_running">Nesting…</string>
@@ -82,6 +83,7 @@
     <string name="nest_est_time">Est. time</string>
     <string name="nest_placed">Placed</string>
     <string name="nest_price">Price</string>
+    <string name="nest_price_breakdown">Cutting: %1$s • Piercing: %2$s • Sheet: %3$s</string>
     <string name="nest_laser_travel">Laser travel</string>
     <string name="part_preview_title">Part preview</string>
     <string name="nest_sheet_used">Sheet %1$d — %2$.1f%% used</string>
@@ -109,7 +111,6 @@
     <string name="nest_zoom_out">Zoom out</string>
     <string name="nest_zoom_fit">Fit to screen</string>
     <string name="nest_zoom_close">Close</string>
-    <string name="nest_zoom_hint">Pinch to zoom • Drag to pan • Double-tap to zoom</string>
 
     <string name="dxf_imported">Imported %1$d part(s) from %2$s.</string>
     <string name="dxf_no_parts">No closed parts were found in this DXF file.</string>

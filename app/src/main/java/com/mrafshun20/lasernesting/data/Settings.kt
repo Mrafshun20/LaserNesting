@@ -30,8 +30,14 @@ data class SettingsEntity(
     val language: String = "fa",
     /** Sheet price per kg; 0 = no material cost figure. */
     val pricePerKg: Double = 0.0,
-    /** Laser machine rate per cutting minute; 0 = no time cost figure. */
+    /**
+     * Deprecated: cutting is priced per metre of cut now
+     * ([cutPricePerMeter]); kept only so installs that already have
+     * the column do not lose it. Nothing reads this any more.
+     */
     val machineRatePerMinute: Double = 0.0,
+    /** Laser cutting fee: price of one metre of cut; 0 = no cutting fee figure. */
+    val cutPricePerMeter: Double = 0.0,
     /** Cost of one pierce; 0 = no pierce cost figure. */
     val pierceCost: Double = 0.0
 )
