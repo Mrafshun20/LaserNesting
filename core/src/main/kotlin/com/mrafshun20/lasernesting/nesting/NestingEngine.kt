@@ -360,7 +360,7 @@ object NestingEngine {
         val partWeight = MaterialDb.weightKg(options.sheetMaterial, totalPlacedArea, t)
         val sheetWeight = MaterialDb.weightKg(options.sheetMaterial, sheetsUsed * sheetArea, t)
         val materialCost = sheetWeight * options.pricePerKg.coerceAtLeast(0.0)
-        val cuttingCost = (totalCutLengthMm / 1000.0) * options.cutPricePerMeter.coerceAtLeast(0.0)
+        val cuttingCost = (totalCutLength / 1000.0) * options.cutPricePerMeter.coerceAtLeast(0.0)
         val pierceCostTotal = totalPierces * options.pierceCost.coerceAtLeast(0.0)
 
         return NestResult(
