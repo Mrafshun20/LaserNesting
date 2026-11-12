@@ -260,6 +260,7 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
                     allowRotationGlobal = s.allowRotation,
                     cuttingSpeedMmPerMin = s.cuttingSpeedMmPerMin,
                     options = NestOptions(
+                        rotationStepDeg = 10,
                         pricePerKg = s.pricePerKg,
                         cutPricePerMeter = s.cutPricePerMeter,
                         pierceCost = s.pierceCost
