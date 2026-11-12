@@ -338,7 +338,7 @@ internal class Layout(
     val unplacedCounts: Map<Long, Int>
 )
 
-internal enum class RasterScore { TOP_EDGE, FIRST_FIT }
+internal enum class RasterScore { TOP_EDGE, FIRST_FIT, CENTROID }
 
 internal object RasterNester {
 
@@ -360,18 +360,24 @@ internal object RasterNester {
         allowRotationGlobal: Boolean,
         score: RasterScore,
         masks: HashMap<Long, PartMask>,
-        deadlineNanos: Long
+        deadlineNanos: Long,
+        angleStep: Int = 45
     ): Layout? {
         val cols = ceil(usableW / cell).toInt() + 2 * padCells + 3
         val rows = ceil(usableH / cell).toInt() + 2 * padCells + 3
         val grids = List(sheetCount) { SheetGrid(cols, rows) }
         val placed = List(sheetCount) { mutableListOf<PlacedPart>() }
         val unplaced = HashMap<Long, Int>()
+        // Placed-mass centroid per sheet (sum of placed part bbox centres + count),
+        // so CENTROID scoring can cluster new parts against the mass already down.
+        val massX = DoubleArray(sheetCount)
+        val massY = DoubleArray(sheetCount)
+        val massCount = IntArray(sheetCount)
 
         for (item in items) {
             if (System.nanoTime() > deadlineNanos) return null
             val part = item.part
-            val angles = distinctAngles(part, allowRotationGlobal)
+            val angles = distinctAngles(part, allowRotationGlobal, angleStep)
             var done = false
             for (si in 0 until sheetCount) {
                 var bestScore = Double.MAX_VALUE
@@ -388,6 +394,19 @@ internal object RasterNester {
                     val s = when (score) {
                         RasterScore.TOP_EDGE -> (pos[1] * cell + mask.heightMm) * 100000.0 + pos[0] * cell
                         RasterScore.FIRST_FIT -> pos[1].toDouble() * 100000.0 + pos[0]
+                        RasterScore.CENTROID -> {
+                            val cx = pos[0] * cell + mask.widthMm / 2.0
+                            val cy = pos[1] * cell + mask.heightMm / 2.0
+                            if (massCount[si] == 0) {
+                                cy * 100000.0 + cx
+                            } else {
+                                val mx = massX[si] / massCount[si]
+                                val my = massY[si] / massCount[si]
+                                val dx = cx - mx
+                                val dy = cy - my
+                                dx * dx + dy * dy
+                            }
+                        }
                     }
                     if (s < bestScore) {
                         bestScore = s
@@ -398,6 +417,9 @@ internal object RasterNester {
                 }
                 val m = bestMask ?: continue
                 grids[si].place(m, bestGx, bestGy)
+                massX[si] += bestGx * cell + m.widthMm / 2.0
+                massY[si] += bestGy * cell + m.heightMm / 2.0
+                massCount[si]++
                 val (pw, ph) = OutlineGeometry.rotatedSize(part.widthMm, part.heightMm, m.angle)
                 val shapeIsCircle = part.shape == PartShape.CIRCLE
                 placed[si].add(
@@ -425,13 +447,21 @@ internal object RasterNester {
     /**
      * Rotation angles worth trying: rectangles and circles look the same at
      * 0/180 and 90/270 (circles at every angle), so only one of each pair is
-     * tried; outlines try every allowed angle.
+     * tried; outlines with unrestricted rotation try every [angleStep]
+     * degrees, so diagonal interlocking at 15/10 degrees is possible.
      */
-    fun distinctAngles(part: PartInput, allowRotationGlobal: Boolean): List<Int> {
+    fun distinctAngles(part: PartInput, allowRotationGlobal: Boolean, angleStep: Int = 45): List<Int> {
         val angles = NestingEngine.allowedAngles(part, allowRotationGlobal)
         return when {
             part.shape == PartShape.CIRCLE -> listOf(angles.first())
-            part.shape == PartShape.DXF && part.outline != null -> angles
+            part.shape == PartShape.DXF && part.outline != null -> {
+                val unrestricted = angles.toSet() == NestingEngine.ALL_ROTATIONS
+                if (unrestricted && angleStep > 0 && angleStep < 45) {
+                    (0 until 360 step angleStep).toList()
+                } else {
+                    angles
+                }
+            }
             else -> angles.distinctBy { it % 180 }
         }
     }

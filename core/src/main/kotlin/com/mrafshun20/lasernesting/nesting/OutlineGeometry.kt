@@ -85,6 +85,25 @@ object OutlineGeometry {
         return Pair(w, h)
     }
 
+    /** Area centroid of a polygon (closed). Returns (0,0) for a degenerate ring. */
+    fun polygonCentroid(points: List<Point>): Point {
+        if (points.size < 3) return Point(0.0, 0.0)
+        var crossSum = 0.0
+        var cx = 0.0
+        var cy = 0.0
+        for (i in points.indices) {
+            val a = points[i]
+            val b = points[(i + 1) % points.size]
+            val cross = a.x * b.y - b.x * a.y
+            crossSum += cross
+            cx += (a.x + b.x) * cross
+            cy += (a.y + b.y) * cross
+        }
+        val area2 = crossSum
+        if (abs(area2) < 1e-9) return Point(0.0, 0.0)
+        return Point(cx / (3.0 * area2), cy / (3.0 * area2))
+    }
+
     /** Area of a polygon (shoelace formula), absolute value. */
     fun polygonArea(points: List<Point>): Double {
         if (points.size < 3) return 0.0

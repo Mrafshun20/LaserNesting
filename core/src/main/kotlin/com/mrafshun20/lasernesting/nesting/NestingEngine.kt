@@ -129,6 +129,10 @@ data class NestOptions(
     val quality: NestQuality = NestQuality.BALANCED,
     /** True-shape nesting (parts fit into each other's concave gaps and holes). */
     val trueShape: Boolean = true,
+    /** Angle step for outline (DXF) parts that may rotate freely; 0 = automatic
+     *  from [quality] (FAST 45, BALANCED 15, HIGH 10 degrees). Parts with a
+     *  restricted angle set keep exactly the angles they allow. */
+    val rotationStepDeg: Int = 0,
     val sheetMaterial: Material = Material.MILD_STEEL,
     val sheetThicknessMm: Double = 3.0,
     /** Price per kg of sheet; 0 disables the cost figure. */
@@ -263,10 +267,16 @@ object NestingEngine {
         // 2) True-shape passes within a time budget.
         if (options.trueShape && valid.isNotEmpty()) {
             val deadline = System.nanoTime() + (options.quality.seconds * 1e9).toLong()
+            val angleStep = if (options.rotationStepDeg > 0) options.rotationStepDeg else when (options.quality) {
+                NestQuality.FAST -> 45
+                NestQuality.BALANCED -> 15
+                NestQuality.HIGH -> 10
+            }
             val reach = spacing / 2.0 + cell * 0.7072
             val padCells = kotlin.math.ceil(reach / cell).toInt() + 1
             val masks = HashMap<Long, PartMask>()
             val passes = listOf(
+                Triple("raster-area-centroid", areaDesc, RasterScore.CENTROID),
                 Triple("raster-area-top", areaDesc, RasterScore.TOP_EDGE),
                 Triple("raster-long-top", longSideDesc, RasterScore.TOP_EDGE),
                 Triple("raster-area-first", areaDesc, RasterScore.FIRST_FIT),
@@ -276,7 +286,7 @@ object NestingEngine {
                 if (System.nanoTime() > deadline) break
                 val layout = RasterNester.run(
                     items(order), usableW, usableH, margin, count, cell, padCells, reach,
-                    allowRotationGlobal, score, masks, deadline
+                    allowRotationGlobal, score, masks, deadline, angleStep
                 ) ?: break
                 addCandidate(name, layout)
             }
@@ -323,7 +333,7 @@ object NestingEngine {
                 )
                 val layout = RasterNester.run(
                     order, usableW, usableH, margin, count, cell, padCells, reach,
-                    allowRotationGlobal, scores[rnd.nextInt(scores.size)], masks, deadline
+                    allowRotationGlobal, scores[rnd.nextInt(scores.size)], masks, deadline, angleStep
                 ) ?: break
                 addCandidate("raster-refine-$round", layout)
                 if (better(bestRank(), before)) sinceImprovement = 0 else sinceImprovement++
