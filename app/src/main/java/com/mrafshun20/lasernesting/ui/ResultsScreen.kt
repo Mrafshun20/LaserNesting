@@ -81,6 +81,7 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlin.math.exp
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -635,7 +636,7 @@ private fun FullscreenSheetView(
         animJob = scope.launch {
             animate(0f, 1f, animationSpec = tween(250)) { f, _ ->
                 scale = lerp(startScale, targetScale, f)
-                offset = lerp(startOffset, endOffset, f)
+                offset = startOffset + (endOffset - startOffset) * f
             }
         }
     }
@@ -769,11 +770,11 @@ private fun FullscreenSheetView(
                                 scale = newScale
                             }
                             val velocity = tracker.calculateVelocity()
-                            if (scale > 1f && velocity.getDistance() > 100f) {
+                            if (scale > 1f && hypot(velocity.x, velocity.y) > 100f) {
                                 animJob = scope.launch {
                                     var v = velocity
                                     var last = withFrameNanos { it }
-                                    while (v.getDistance() > 20f) {
+                                    while (hypot(v.x, v.y) > 20f) {
                                         val now = withFrameNanos { it }
                                         val dt = ((now - last) / 1_000_000_000f)
                                             .coerceIn(0f, 0.05f)
