@@ -1,0 +1,33 @@
+name: Core tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Kotlin compiler
+        run: |
+          curl -sSL -o kotlinc.zip https://github.com/JetBrains/kotlin/releases/download/v2.0.21/kotlin-compiler-2.0.21.zip
+          unzip -q kotlinc.zip
+
+      - name: Compile core and tests
+        run: kotlinc/bin/kotlinc core/src/main/kotlin core/src/test/kotlin -include-runtime -d core-test.jar
+
+      - name: Nesting self-test
+        run: java -cp core-test.jar com.mrafshun20.lasernesting.nesting.NestingSelfTestKt
+
+      - name: DXF parser self-test
+        run: java -cp core-test.jar com.mrafshun20.lasernesting.dxf.DxfParserTestKt

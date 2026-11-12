@@ -66,18 +66,25 @@ feel finished, not like a prototype.
 
 ## How the nesting works
 
-Each part is inflated by (kerf + gap) for packing so neighbouring cuts
-never merge, and the usable area is the sheet minus the edge margin on all
-four sides. Parts are packed highest-priority first, then largest-first,
-with the MaxRects Best Short Side Fit heuristic, trying each allowed
-rotation angle (0/90/180/270). Packing continues across sheets until every
-part is placed or the sheets run out. Utilization uses the true part area
-(circle area for circles, outline area minus holes for DXF parts). Cut
-length is the sum of part perimeters (circumference for circles, outline
-perimeter plus hole circumferences for DXF parts); cutting time is cut
-length divided by the cutting speed you set. After nesting, the largest
-free rectangle on each sheet (at least 50 x 50 mm) is reported as a
-remnant.
+Parts are rasterised at every allowed rotation (0/90/180/270) into a bit
+mask already inflated by half of (kerf + gap), and placed on a bit-grid of
+the sheet at the bottom-left-most free position. Because the mask follows
+the real outline, parts nest into the concave gaps, slots and **holes of
+other parts** — that is where the yield gain over plain bounding-box
+packing comes from. Several strategies compete (MaxRects baseline plus
+true-shape passes in different sort orders), then **seeded randomised
+restarts** run while a job still has unplaced parts or could save a sheet.
+The winner is chosen by: fewest unplaced parts, then fewest sheets, then
+the largest reusable remnant. Priority groups are never reordered.
+Results are validated against overlaps, spacing and sheet bounds by the
+self-test in `core/src/test`.
+
+Utilization uses true part area (outline minus holes and cutouts). The cut
+plan cuts inner contours first and the outer contour last, parts visited
+nearest-neighbour from the machine's home corner; pierces, rapid travel,
+cutting time (material table or your own speed), weight, scrap and cost
+are all derived from that plan. The largest free rectangle per sheet
+(at least 50 x 50 mm) is reported as a remnant.
 
 **DXF import.** The parser reads the file's `$INSUNITS` and converts to
 millimetres (mm is assumed when missing), resolves block INSERTs (nested
@@ -202,49 +209,23 @@ Kotlin + Jetpack Compose + Material 3 + Room (Android) / Compose Desktop
 
 ## Current limits
 
-- **Bounding-box packing.** Packing reserves each part's full bounding
-  box (MaxRects). A DXF outline's true shape is used for area, cut length
-  and drawing, but the packer does not nest other parts into the concave
-  gaps inside a bounding box. True-shape (polygon) packing is not in this
-  version, so concave outlines waste the space inside their bounding box.
-- The DXF parser treats every outermost closed loop as a part, including
-  stray slot geometry that happens to close outside the main drawing; the
-  user can delete unwanted parts from the library. Inner loops are treated
-  as cutouts, not parts.
-- No common-line cutting (shared cut edges between neighbouring parts).
-- No remnant library yet — remnants are reported per sheet, not saved for
-  nesting on later.
-- Cutting time is a rough estimate only (cut length / speed); it does not
-  model pierce time, rapid moves or acceleration.
+- **Raster resolution.** True-shape nesting works on a 1–3 mm grid, so each
+  edge can carry up to one cell of extra clearance. Quality "Best yield"
+  uses a finer grid and a longer time budget.
+- **No lead-ins / micro-joints / common-line cutting yet.** The DXF export
+  contains the cut order on separate layers (`CUT_INNER`, `CUT_OUTER`);
+  technology (lead-ins, tabs) is added in BySoft.
+- **DXF import** reads LINE / ARC / CIRCLE / LWPOLYLINE / POLYLINE / INSERT;
+  splines and ellipses are skipped with a warning.
+- **Cutting-time figures** from the material table are typical values for
+  a ~6 kW fiber laser; enter your own speed for exact estimates.
 
-## Roadmap (IGEMS-style)
+## Quality checks
 
-- True-shape (polygon) nesting so concave DXF outlines pack tighter.
-- Common-line cutting.
-- Remnant library: save leftover sheet pieces and nest on them first.
-- Material database with cutting parameters per material and thickness.
-- Cut-path simulation and ordering before export.
+```bash
+kotlinc core/src/main/kotlin core/src/test/kotlin -include-runtime -d nest-test.jar
+java -cp nest-test.jar com.mrafshun20.lasernesting.nesting.NestingSelfTestKt
+java -cp nest-test.jar com.mrafshun20.lasernesting.dxf.DxfParserTestKt
+```
 
----
-
-## فارسی (خلاصه)
-
-**چیدمان لیزر — نسخه ۲**
-
-اپلیکیشن اندرویدی (و ویندوزی) برای چیدمان قطعات روی ورق و برش با لیزر
-بایسترونیک، شبیه IGEMS AutoNest.
-
-- **دوزبانه:** فارسی و انگلیسی، با انتخاب زبان در تنظیمات. فونت فارسی
-  **وزیرمتن** است.
-- **وارد کردن DXF:** فایل DXF مشتری را انتخاب کنید؛ هر خط بسته در فایل یک
-  قطعه می‌شود (خط واقعی + سوراخ‌ها). تعداد هر قطعه را خودتان تعیین کنید.
-- **چرخش و اولویت:** هر قطعه زاویه‌های چرخش ۰، ۹۰، ۱۸۰ و ۲۷۰ درجه و
-  اولویت دارد (اولویت بالاتر زودتر چیده می‌شود).
-- **باقیمانده:** بزرگ‌ترین مستطیل خالی هر ورق به‌عنوان باقیمانده قابل
-  استفاده نمایش داده می‌شود.
-- **ویندوز:** با دستور `gradle :desktop:createDistributable` نسخه ویندوز
-  ساخته می‌شود و با `gradle :desktop:packageExe` نصب‌کننده `.exe` تولید
-  می‌شود.
-- **محدودیت مهم:** چیدمان بر اساس مستطیل محیطی قطعه انجام می‌شود؛ فضای
-  خالی داخل خط‌های مقعر استفاده نمی‌شود. چیدمان چندضلعی واقعی در این نسخه
-  نیست.
+The same checks run in CI (`.github/workflows/core-tests.yml`).

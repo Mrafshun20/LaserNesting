@@ -182,5 +182,11 @@ fun main() {
         rectPart(3, 120.0, 80.0, 60), rectPart(4, 40.0, 40.0, 100)
     )
     run("shop mix 2500x1250", shop, sw = 2500.0, sl = 1250.0, sheets = 2)
+    // 10) Tight multi-sheet job: refinement must keep the result valid.
+    val tight = listOf(
+        polyPart(1, "L", lShape(420.0, 310.0, 90.0), emptyList(), 36),
+        rectPart(2, 333.0, 211.0, 14)
+    )
+    run("tight 2-sheet job", tight, sheets = 2)
     println("ALL NESTING CHECKS PASSED")
 }

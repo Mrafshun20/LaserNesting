@@ -279,6 +279,54 @@ object NestingEngine {
                 ) ?: break
                 addCandidate(name, layout)
             }
+
+            // 3) Refinement: randomised restarts (jittered sort keys, random
+            // placement rule) until the budget is spent or six in a row bring no
+            // improvement. Priority groups stay strictly ordered. Seeded, so the
+            // same job always gives the same layout.
+            fun better(a: LongArray, b: LongArray): Boolean {
+                for (i in a.indices) {
+                    if (a[i] != b[i]) return a[i] < b[i]
+                }
+                return false
+            }
+            fun bestRank(): LongArray = candidates.minWithOrNull { a, b ->
+                if (better(a.rank, b.rank)) -1 else if (better(b.rank, a.rank)) 1 else 0
+            }!!.rank
+            val refineUntil = System.nanoTime() +
+                ((deadline - System.nanoTime()) * 0.7).toLong()
+            val rnd = java.util.Random(12345L)
+            var sinceImprovement = 0
+            var round = 0
+            val scores = RasterScore.entries
+            // Only worth it when it can still save parts or a whole sheet.
+            fun canImprove(): Boolean {
+                val r = bestRank()
+                return r[0] > 0L || r[1] > 1L
+            }
+            while (canImprove() && System.nanoTime() < refineUntil &&
+                sinceImprovement < 6 && round < 60
+            ) {
+                round++
+                val before = bestRank()
+                val jitter = HashMap<RasterNester.Item, Double>()
+                val base = items(areaDesc)
+                val spread = 0.15 + 0.35 * rnd.nextDouble()
+                for (it in base) {
+                    val a = it.part.widthMm * it.part.heightMm
+                    jitter[it] = a * (1.0 + spread * (rnd.nextDouble() * 2.0 - 1.0))
+                }
+                val order = base.sortedWith(
+                    compareByDescending<RasterNester.Item> { it.part.priority }
+                        .thenByDescending { jitter[it] ?: 0.0 }
+                )
+                val layout = RasterNester.run(
+                    order, usableW, usableH, margin, count, cell, padCells, reach,
+                    allowRotationGlobal, scores[rnd.nextInt(scores.size)], masks, deadline
+                ) ?: break
+                addCandidate("raster-refine-$round", layout)
+                if (better(bestRank(), before)) sinceImprovement = 0 else sinceImprovement++
+            }
         }
 
         val best = candidates.minWithOrNull { a, b ->
