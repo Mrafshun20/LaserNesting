@@ -18,20 +18,20 @@ import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFB89B5E),
-    onPrimary = Color(0xFF141210),
-    primaryContainer = Color(0xFF3A3226),
-    onPrimaryContainer = Color(0xFFD9C08A),
-    secondary = Color(0xFF7A9BB5),
-    background = Color(0xFF0E1113),
-    onBackground = Color(0xFFE7EAEC),
-    surface = Color(0xFF161B1F),
-    onSurface = Color(0xFFE7EAEC),
-    surfaceVariant = Color(0xFF21272C),
-    onSurfaceVariant = Color(0xFF98A1A7),
-    error = Color(0xFFC07A6E),
-    errorContainer = Color(0xFF3A2320),
-    onErrorContainer = Color(0xFFE8B8AE)
+    primary = Color(0xFFC9A96E),
+    onPrimary = Color(0xFF12100C),
+    primaryContainer = Color(0xFF3D3426),
+    onPrimaryContainer = Color(0xFFE2C98A),
+    secondary = Color(0xFF6B9BB8),
+    background = Color(0xFF0A0C0E),
+    onBackground = Color(0xFFF0F2F4),
+    surface = Color(0xFF121518),
+    onSurface = Color(0xFFF0F2F4),
+    surfaceVariant = Color(0xFF1A1F24),
+    onSurfaceVariant = Color(0xFF8B959C),
+    error = Color(0xFFD08A7C),
+    errorContainer = Color(0xFF3A221E),
+    onErrorContainer = Color(0xFFF0C4B8)
 )
 
 /**

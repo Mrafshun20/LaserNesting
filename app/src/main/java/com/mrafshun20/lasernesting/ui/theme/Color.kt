@@ -2,38 +2,33 @@ package com.mrafshun20.lasernesting.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Workshop dark theme — deep neutral charcoal surfaces, one restrained
-// brass accent. No bright candy colours anywhere: the accent, the
-// secondary tones and the part fills are all desaturated and muted,
-// like a professional industrial CAM tool (IGEMS-style), not a toy.
-val DarkBackground = Color(0xFF0F1214)
-val DarkSurface = Color(0xFF171B1E)
-val DarkSurfaceVariant = Color(0xFF21272C)
-val DarkOnSurface = Color(0xFFE7EAEC)
-val DarkOnSurfaceVariant = Color(0xFF98A1A7)
-val BrassPrimary = Color(0xFFB89B5E)
-val SteelBlue = Color(0xFF7A9BB5)
-val SageGreen = Color(0xFF7FA08A)
+// Modern industrial dark theme — deeper blacks, sharper hierarchy,
+// single refined brass accent. Clean CAM-tool look.
+val DarkBackground = Color(0xFF0A0C0E)
+val DarkSurface = Color(0xFF121518)
+val DarkSurfaceVariant = Color(0xFF1A1F24)
+val DarkOnSurface = Color(0xFFF0F2F4)
+val DarkOnSurfaceVariant = Color(0xFF8B959C)
+val BrassPrimary = Color(0xFFC9A96E)
+val SteelBlue = Color(0xFF6B9BB8)
+val SageGreen = Color(0xFF6F9B82)
 
-// Muted remnant green (nest view + exports): sage, not traffic-light.
-val MutedRemnant = Color(0xFF5E8A6B)
+// Muted remnant green (nest view + exports)
+val MutedRemnant = Color(0xFF5A8A6A)
 
-// The sheet itself is drawn light, like a real sheet of metal on the bed.
-val SheetBackground = Color(0xFFF2F3F4)
+// Sheet drawn light, like real metal on the bed
+val SheetBackground = Color(0xFFF4F5F6)
 
 /**
- * Distinct fill colours for parts, shared by the on-screen canvas and the
- * SVG export. Muted, desaturated industrial tones — every part stays
- * distinguishable, but nothing reads as a bright crayon colour. The same
- * 12 tones live in core ExportCore so the SVG export matches the screen.
+ * Distinct fill colours for parts. Muted industrial tones.
  */
 val PartPaletteHex = listOf(
-    "#7A9BB5",
-    "#A96A56",
-    "#7FA08A",
-    "#B89B5E",
+    "#6B9BB8",
+    "#B86A55",
+    "#6F9B82",
+    "#C9A96E",
     "#8A7A9E",
-    "#5F8F8A",
+    "#5A8F8A",
     "#9C8A76",
     "#7E8894",
     "#A87E7E",

@@ -5,55 +5,48 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
- * ibebels desktop design tokens.
- *
- * Deep neutral charcoal surfaces, one restrained brass accent, muted
- * steel-blue / sage secondaries. No bright candy colours anywhere:
- * the accent, the CAM colours (laser / rapid / pierce) and the part
- * fills are all desaturated industrial tones, so the tool reads as a
- * professional CAD/CAM workstation, not a toy.
+ * Modern desktop design tokens.
+ * Deeper charcoal, refined brass accent, clean CAM colours.
  */
 object Ui {
-    val Bg = Color(0xFF0E1113)
-    val Surface = Color(0xFF161B1F)
-    val Card = Color(0xFF1D2329)
-    val CardHover = Color(0xFF242C33)
+    val Bg = Color(0xFF0A0C0E)
+    val Surface = Color(0xFF121518)
+    val Card = Color(0xFF181E24)
+    val CardHover = Color(0xFF222A32)
     val Border = Color(0xFF2A323A)
 
-    val TextPrimary = Color(0xFFE7EAEC)
-    val TextSecondary = Color(0xFF98A1A7)
-    val TextMuted = Color(0xFF6E787F)
+    val TextPrimary = Color(0xFFF0F2F4)
+    val TextSecondary = Color(0xFF8B959C)
+    val TextMuted = Color(0xFF5E686F)
 
-    // Single restrained accent: muted brass.
-    val Accent = Color(0xFFB89B5E)
-    val AccentDim = Color(0x2EB89B5E)
+    // Refined brass accent
+    val Accent = Color(0xFFC9A96E)
+    val AccentDim = Color(0x2EC9A96E)
 
-    // CAM colours, all muted: burnt orange laser, steel-blue rapid,
-    // dusty ochre pierce, sage success, muted rose danger.
+    // CAM colours — muted industrial
     val Laser = Color(0xFFC07A52)
-    val Rapid = Color(0xFF7A9BB5)
-    val Pierce = Color(0xFFC9A959)
-    val Success = Color(0xFF7FA08A)
-    val Danger = Color(0xFFC07A6E)
+    val Rapid = Color(0xFF6B9BB8)
+    val Pierce = Color(0xFFC9A96E)
+    val Success = Color(0xFF6F9B82)
+    val Danger = Color(0xFFD08A7C)
 
-    val SheetFill = Color(0xFF1B2127)
-    val SheetGrid = Color(0xFF262E37)
-    val SheetMargin = Color(0x66C07A6E)
-    val Remnant = Color(0xFF7FA08A)
+    val SheetFill = Color(0xFF161C22)
+    val SheetGrid = Color(0xFF222A32)
+    val SheetMargin = Color(0x66D08A7C)
+    val Remnant = Color(0xFF6F9B82)
 
-    // Tight, professional radii — small chamfer-like corners.
-    val RCard = RoundedCornerShape(12.dp)
-    val RPanel = RoundedCornerShape(10.dp)
-    val RButton = RoundedCornerShape(8.dp)
-    val RField = RoundedCornerShape(8.dp)
+    // Modern radii
+    val RCard = RoundedCornerShape(14.dp)
+    val RPanel = RoundedCornerShape(12.dp)
+    val RButton = RoundedCornerShape(10.dp)
+    val RField = RoundedCornerShape(10.dp)
     val RChip = RoundedCornerShape(8.dp)
 
     val Pad = 16.dp
     val Gap = 12.dp
 
-    /** Part fills: muted industrial tones, same 12-tone family as Android. */
     val PartColors = listOf(
-        Color(0xFF7A9BB5), Color(0xFFA96A56), Color(0xFF7FA08A), Color(0xFFB89B5E),
-        Color(0xFF8A7A9E), Color(0xFF5F8F8A), Color(0xFF9C8A76), Color(0xFF7E8894)
+        Color(0xFF6B9BB8), Color(0xFFB86A55), Color(0xFF6F9B82), Color(0xFFC9A96E),
+        Color(0xFF8A7A9E), Color(0xFF5A8F8A), Color(0xFF9C8A76), Color(0xFF7E8894)
     )
 }

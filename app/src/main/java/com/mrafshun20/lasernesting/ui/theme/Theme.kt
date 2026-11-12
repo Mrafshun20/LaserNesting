@@ -17,8 +17,7 @@ import androidx.compose.ui.unit.sp
 import com.mrafshun20.lasernesting.R
 
 /**
- * Vazirmatn — a neat, proper Persian font, bundled with the app.
- * Used for Persian text; English falls back to the system font.
+ * Vazirmatn — Persian font, bundled with the app.
  */
 val VazirmatnFamily = FontFamily(
     Font(R.font.vazirmatn_regular, FontWeight.Normal),
@@ -27,84 +26,79 @@ val VazirmatnFamily = FontFamily(
 )
 
 /**
- * Restrained type scale: small, disciplined steps, semibold titles.
- * Industrial tools read through hierarchy, not through size jumps.
+ * Clean, modern type scale with tight hierarchy.
  */
 private fun buildTypography(fontFamily: FontFamily?): Typography {
     val base = Typography()
     return Typography(
-        displayLarge = base.displayLarge.copy(fontFamily = fontFamily, fontSize = 40.sp, fontWeight = FontWeight.Bold),
-        displayMedium = base.displayMedium.copy(fontFamily = fontFamily, fontSize = 34.sp, fontWeight = FontWeight.Bold),
-        displaySmall = base.displaySmall.copy(fontFamily = fontFamily, fontSize = 28.sp, fontWeight = FontWeight.Bold),
-        headlineLarge = base.headlineLarge.copy(fontFamily = fontFamily, fontSize = 26.sp, fontWeight = FontWeight.SemiBold),
-        headlineMedium = base.headlineMedium.copy(fontFamily = fontFamily, fontSize = 22.sp, fontWeight = FontWeight.SemiBold),
-        headlineSmall = base.headlineSmall.copy(fontFamily = fontFamily, fontSize = 19.sp, fontWeight = FontWeight.SemiBold),
-        titleLarge = base.titleLarge.copy(fontFamily = fontFamily, fontSize = 19.sp, fontWeight = FontWeight.SemiBold),
+        displayLarge = base.displayLarge.copy(fontFamily = fontFamily, fontSize = 36.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
+        displayMedium = base.displayMedium.copy(fontFamily = fontFamily, fontSize = 30.sp, fontWeight = FontWeight.Bold),
+        displaySmall = base.displaySmall.copy(fontFamily = fontFamily, fontSize = 26.sp, fontWeight = FontWeight.Bold),
+        headlineLarge = base.headlineLarge.copy(fontFamily = fontFamily, fontSize = 24.sp, fontWeight = FontWeight.SemiBold),
+        headlineMedium = base.headlineMedium.copy(fontFamily = fontFamily, fontSize = 20.sp, fontWeight = FontWeight.SemiBold),
+        headlineSmall = base.headlineSmall.copy(fontFamily = fontFamily, fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
+        titleLarge = base.titleLarge.copy(fontFamily = fontFamily, fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
         titleMedium = base.titleMedium.copy(fontFamily = fontFamily, fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
         titleSmall = base.titleSmall.copy(fontFamily = fontFamily, fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
-        bodyLarge = base.bodyLarge.copy(fontFamily = fontFamily, fontSize = 15.sp),
-        bodyMedium = base.bodyMedium.copy(fontFamily = fontFamily, fontSize = 13.sp),
+        bodyLarge = base.bodyLarge.copy(fontFamily = fontFamily, fontSize = 15.sp, lineHeight = 22.sp),
+        bodyMedium = base.bodyMedium.copy(fontFamily = fontFamily, fontSize = 13.sp, lineHeight = 18.sp),
         bodySmall = base.bodySmall.copy(fontFamily = fontFamily, fontSize = 12.sp),
         labelLarge = base.labelLarge.copy(fontFamily = fontFamily, fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
-        labelMedium = base.labelMedium.copy(fontFamily = fontFamily, fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
-        labelSmall = base.labelSmall.copy(fontFamily = fontFamily, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        labelMedium = base.labelMedium.copy(fontFamily = fontFamily, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+        labelSmall = base.labelSmall.copy(fontFamily = fontFamily, fontSize = 11.sp, fontWeight = FontWeight.Medium)
     )
 }
 
 /**
- * Tight, professional corner radii: small chamfer-like corners the way
- * industrial software does them — no big bubbly 16–28 dp rounds.
+ * Modern radii — slightly softer than pure industrial, still tight.
  */
 private val AppShapes = Shapes(
     extraSmall = RoundedCornerShape(6.dp),
     small = RoundedCornerShape(8.dp),
-    medium = RoundedCornerShape(10.dp),
-    large = RoundedCornerShape(12.dp),
-    extraLarge = RoundedCornerShape(16.dp)
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(14.dp),
+    extraLarge = RoundedCornerShape(18.dp)
 )
 
 /**
- * Dark professional theme for the workshop: deep neutral charcoal
- * surfaces with one restrained brass accent. Dark is the default — a
- * nesting tool is used on the shop floor, next to the machine.
+ * Dark professional theme — deeper blacks, clearer elevation ladder,
+ * refined brass accent.
  */
 private val DarkColors = darkColorScheme(
     primary = BrassPrimary,
-    onPrimary = Color(0xFF141210),
-    primaryContainer = Color(0xFF3A3226),
-    onPrimaryContainer = Color(0xFFD9C08A),
+    onPrimary = Color(0xFF12100C),
+    primaryContainer = Color(0xFF3D3426),
+    onPrimaryContainer = Color(0xFFE2C98A),
     secondary = SteelBlue,
-    onSecondary = Color(0xFF10161B),
-    secondaryContainer = Color(0xFF22303B),
-    onSecondaryContainer = Color(0xFFA9C3D6),
+    onSecondary = Color(0xFF0C1216),
+    secondaryContainer = Color(0xFF1E2C36),
+    onSecondaryContainer = Color(0xFFA8C8DC),
     tertiary = SageGreen,
-    onTertiary = Color(0xFF101613),
+    onTertiary = Color(0xFF0C1210),
     background = DarkBackground,
     onBackground = DarkOnSurface,
     surface = DarkSurface,
     onSurface = DarkOnSurface,
     surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = DarkOnSurfaceVariant,
-    // M3 tonal surface ladder — cards sit on surfaceContainer, raised
-    // controls on surfaceContainerHigh, the page on background.
-    surfaceContainerLowest = Color(0xFF0B0D0F),
-    surfaceContainerLow = Color(0xFF14181B),
-    surfaceContainer = Color(0xFF1C2125),
-    surfaceContainerHigh = Color(0xFF23292E),
-    surfaceContainerHighest = Color(0xFF2A3138),
-    error = Color(0xFFC07A6E),
-    onError = Color(0xFF1A1210),
-    errorContainer = Color(0xFF3A2320),
-    onErrorContainer = Color(0xFFE8B8AE),
-    outline = Color(0xFF2E353B),
-    outlineVariant = Color(0xFF23282D)
+    surfaceContainerLowest = Color(0xFF070809),
+    surfaceContainerLow = Color(0xFF0F1215),
+    surfaceContainer = Color(0xFF161A1E),
+    surfaceContainerHigh = Color(0xFF1E242A),
+    surfaceContainerHighest = Color(0xFF262D34),
+    error = Color(0xFFD08A7C),
+    onError = Color(0xFF1A100E),
+    errorContainer = Color(0xFF3A221E),
+    onErrorContainer = Color(0xFFF0C4B8),
+    outline = Color(0xFF2A323A),
+    outlineVariant = Color(0xFF1E242A)
 )
 
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF4E6E86),
+    primary = Color(0xFF4A6A82),
     onPrimary = Color.White,
-    secondary = Color(0xFF5F7A6E),
-    background = Color(0xFFF2F3F4),
+    secondary = Color(0xFF5A7A6C),
+    background = Color(0xFFF4F5F6),
     surface = Color.White
 )
 
@@ -113,8 +107,6 @@ fun LaserNestingTheme(
     darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    // Persian UI uses the bundled Vazirmatn font; English keeps the
-    // system font. The locale follows the in-app language selector.
     val configuration = LocalConfiguration.current
     val isPersian = configuration.locales.get(0)?.language == "fa"
     MaterialTheme(
