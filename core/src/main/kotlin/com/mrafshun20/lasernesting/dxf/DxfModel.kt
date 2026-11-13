@@ -41,7 +41,12 @@ data class DxfPart(
     val holes: List<DxfCircleHole>,
     val widthMm: Double,
     val heightMm: Double,
-    val layer: String
+    val layer: String,
+    /**
+     * Non-circular inner contours (slots, windows, notches) directly inside
+     * the outline, as closed polylines in the same normalised coordinates.
+     */
+    val cutouts: List<List<DxfPoint>> = emptyList()
 )
 
 /**
@@ -67,5 +72,6 @@ data class DxfParseResult(
 fun DxfPart.toPartOutline(): PartOutline {
     val points = outline.map { Point(it.x, it.y) }
     val holes = holes.map { CircleHole(Point(it.center.x, it.center.y), it.radius) }
-    return PartOutline(points, holes, widthMm, heightMm)
+    val cut = cutouts.map { loop -> loop.map { Point(it.x, it.y) } }
+    return PartOutline(points, holes, widthMm, heightMm, cut)
 }

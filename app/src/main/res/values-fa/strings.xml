@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">چیدمان لیزر</string>
-    <string name="app_subtitle">چیدمان ورق بایسترونیک</string>
+    <string name="app_name">iBebels</string>
+    <string name="app_subtitle">چیدمان هوشمند ورق لیزر</string>
 
     <string name="tab_parts">قطعات</string>
     <string name="tab_setup">تنظیمات</string>
@@ -103,4 +103,26 @@
     <string name="dxf_imported">%1$d قطعه از %2$s وارد شد.</string>
     <string name="dxf_no_parts">در این فایل DXF هیچ قطعه بسته‌ای پیدا نشد.</string>
     <string name="dxf_read_error">خواندن این فایل DXF ممکن نشد.</string>
+    <string name="setup_engine">موتور چیدمان</string>
+    <string name="engine_auto">خودکار (بهترین نتیجه)</string>
+    <string name="engine_true">شکل واقعی</string>
+    <string name="engine_box">سریع (جعبه‌ای)</string>
+    <string name="engine_hint_auto">همه روش‌ها را امتحان می‌کند و بهترین چیدمان را نگه می‌دارد.</string>
+    <string name="engine_hint_true">قطعات در هم قفل می‌شوند و داخل سوراخ و شیار قطعات بزرگ‌تر جا می‌گیرند.</string>
+    <string name="engine_hint_box">آنی. مناسب قطعات مستطیلی.</string>
+    <string name="setup_precision">دقت</string>
+    <string name="prec_auto">خودکار</string>
+    <string name="prec_fine">ریز ۱ mm</string>
+    <string name="prec_normal">معمولی ۲ mm</string>
+    <string name="prec_fast">سریع ۳ mm</string>
+    <string name="setup_rot_step">چرخش ریز (قطعات DXF)</string>
+    <string name="rot_off">خاموش</string>
+    <string name="setup_pierce_time">زمان سوراخ‌کاری هر کانتور</string>
+    <string name="nest_pierces">سوراخ‌کاری</string>
+    <string name="nest_weight">وزن ورق</string>
+    <string name="nest_engine_info">موتور: %1$s • %2$d ms</string>
+    <string name="nest_export_dxf">DXF برای دستگاه</string>
+    <string name="nest_export_report">گزارش (HTML)</string>
+    <string name="nest_share_dxf">اشتراک DXF</string>
+    <string name="nest_share_report">اشتراک گزارش</string>
 </resources>

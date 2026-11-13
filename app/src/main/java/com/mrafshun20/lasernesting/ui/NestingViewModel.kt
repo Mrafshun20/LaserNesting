@@ -18,6 +18,8 @@ import com.mrafshun20.lasernesting.data.PartShape
 import com.mrafshun20.lasernesting.data.SettingsEntity
 import com.mrafshun20.lasernesting.dxf.DxfParser
 import com.mrafshun20.lasernesting.dxf.toPartOutline
+import com.mrafshun20.lasernesting.nesting.NestMode
+import com.mrafshun20.lasernesting.nesting.NestOptions
 import com.mrafshun20.lasernesting.nesting.NestResult
 import com.mrafshun20.lasernesting.nesting.NestingEngine
 import com.mrafshun20.lasernesting.nesting.PartInput
@@ -133,8 +135,8 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
                     widthMm = dxfPart.widthMm,
                     heightMm = dxfPart.heightMm,
                     quantity = 1,
-                    material = Material.MILD_STEEL,
-                    thicknessMm = 3.0,
+                    material = settings.value.sheetMaterial,
+                    thicknessMm = settings.value.sheetThicknessMm,
                     allowRotation = true,
                     allowedRotationsCsv = "0,90,180,270",
                     priority = 0,
@@ -213,15 +215,24 @@ class NestingViewModel(application: Application) : AndroidViewModel(application)
             }
             val result = withContext(Dispatchers.Default) {
                 NestingEngine.nest(
-                    parts = inputs,
-                    sheetWidthMm = s.sheetWidthMm,
-                    sheetLengthMm = s.sheetLengthMm,
-                    sheetCount = s.sheetCount,
-                    kerfMm = s.kerfMm,
-                    gapMm = s.gapMm,
-                    marginMm = s.marginMm,
-                    allowRotationGlobal = s.allowRotation,
-                    cuttingSpeedMmPerMin = s.cuttingSpeedMmPerMin
+                    inputs,
+                    NestOptions(
+                        sheetWidthMm = s.sheetWidthMm,
+                        sheetLengthMm = s.sheetLengthMm,
+                        sheetCount = s.sheetCount,
+                        kerfMm = s.kerfMm,
+                        gapMm = s.gapMm,
+                        marginMm = s.marginMm,
+                        allowRotationGlobal = s.allowRotation,
+                        cuttingSpeedMmPerMin = s.cuttingSpeedMmPerMin,
+                        mode = runCatching { NestMode.valueOf(s.nestMode) }
+                            .getOrDefault(NestMode.AUTO),
+                        precisionMm = s.precisionMm,
+                        rotationStepDeg = s.rotationStepDeg,
+                        pierceTimeSec = s.pierceTimeSec,
+                        sheetMaterial = s.sheetMaterial,
+                        sheetThicknessMm = s.sheetThicknessMm
+                    )
                 )
             }
             nestResult = result

@@ -27,5 +27,7 @@ enum class SheetPreset(
 ) {
     SHEET_2000x1000("2000 x 1000 mm", 2000.0, 1000.0),
     SHEET_2500x1250("2500 x 1250 mm", 2500.0, 1250.0),
+    SHEET_3000x1500("3000 x 1500 mm", 3000.0, 1500.0),
+    SHEET_4000x2000("4000 x 2000 mm", 4000.0, 2000.0),
     CUSTOM("Custom", null, null)
 }

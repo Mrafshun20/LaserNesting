@@ -75,10 +75,14 @@ import kotlin.math.roundToInt
 import com.mrafshun20.lasernesting.R
 import com.mrafshun20.lasernesting.data.PartShape
 import com.mrafshun20.lasernesting.export.Export
+import com.mrafshun20.lasernesting.export.ExportCore
 import com.mrafshun20.lasernesting.nesting.NestSheet
 import com.mrafshun20.lasernesting.nesting.NestingEngine
 import com.mrafshun20.lasernesting.nesting.PlacedPart
+import com.mrafshun20.lasernesting.ui.theme.RemnantGreen
 import com.mrafshun20.lasernesting.ui.theme.SheetBackground
+import com.mrafshun20.lasernesting.ui.theme.SheetBorder
+import com.mrafshun20.lasernesting.ui.theme.SheetGrid
 import com.mrafshun20.lasernesting.ui.theme.partColor
 
 /**
@@ -227,6 +231,41 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                 }
             }
 
+            // ---- Extra stats: pierces, weight, engine ----
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        MiniStat(
+                            label = stringResource(R.string.nest_pierces),
+                            value = "${r.totalPierces}"
+                        )
+                        if (r.sheetsWeightKg > 0) {
+                            MiniStat(
+                                label = stringResource(R.string.nest_weight),
+                                value = "%.1f kg".format(Locale.US, r.sheetsWeightKg)
+                            )
+                        }
+                    }
+                    Text(
+                        text = stringResource(R.string.nest_engine_info, r.engineLabel, r.elapsedMs.toInt()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             // ---- Sheet selector + drawing ----
             if (r.sheets.isNotEmpty()) {
                 Row(
@@ -325,7 +364,7 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                             formatMm(remnant.heightMm)
                         ),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF2E7D32)
+                        color = RemnantGreen
                     )
                 }
             }
@@ -425,6 +464,55 @@ fun ResultsScreen(viewModel: NestingViewModel) {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.nest_export_svg))
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        val files = r.sheets.map { sheet ->
+                            "ibebels-sheet-${sheet.index + 1}.dxf" to ExportCore.sheetDxf(
+                                sheet, settings.sheetWidthMm, settings.sheetLengthMm
+                            )
+                        }
+                        Export.shareFiles(
+                            context = context,
+                            files = files,
+                            mimeType = "application/dxf",
+                            chooserTitle = context.getString(R.string.nest_share_dxf)
+                        )
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(imageVector = Icons.Filled.Share, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.nest_export_dxf))
+                }
+                OutlinedButton(
+                    onClick = {
+                        val persian = context.resources.configuration.locales.get(0)?.language == "fa"
+                        val html = ExportCore.reportHtml(
+                            result = r,
+                            sheetWidthMm = settings.sheetWidthMm,
+                            sheetLengthMm = settings.sheetLengthMm,
+                            title = "iBebels",
+                            machine = settings.machinePreset.displayName,
+                            materialLine = settings.sheetMaterial.displayName + " " +
+                                formatMm(settings.sheetThicknessMm) + " mm",
+                            persian = persian
+                        )
+                        Export.shareFile(
+                            context = context,
+                            fileName = "ibebels-report.html",
+                            mimeType = "text/html",
+                            content = html,
+                            chooserTitle = context.getString(R.string.nest_share_report)
+                        )
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(imageVector = Icons.Filled.Download, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.nest_export_report))
                 }
             }
         }
@@ -674,7 +762,7 @@ private fun SheetCanvas(
         modifier = modifier
             .aspectRatio(aspectRatio)
             .background(SheetBackground)
-            .border(1.dp, Color.Gray)
+            .border(1.dp, SheetBorder)
     ) {
         val scale = minOf(
             size.width / sheetWidthMm.toFloat(),
@@ -683,7 +771,7 @@ private fun SheetCanvas(
 
         // Light grid every 500 mm.
         val gridStepMm = 500.0
-        val gridColor = Color(0xFFE0E0E0)
+        val gridColor = SheetGrid
         var gridX = gridStepMm
         while (gridX < sheetWidthMm) {
             val x = (gridX * scale).toFloat()
@@ -711,7 +799,7 @@ private fun SheetCanvas(
         if (marginMm > 0) {
             val m = (marginMm * scale).toFloat()
             drawRect(
-                color = Color(0xFF9E9E9E),
+                color = Color(0xFF7C8CA8),
                 topLeft = Offset(m, m),
                 size = Size(size.width - 2 * m, size.height - 2 * m),
                 style = Stroke(width = 1.5f)
@@ -729,7 +817,7 @@ private fun SheetCanvas(
             val width = (remnant.widthMm * scale).toFloat()
             val height = (remnant.heightMm * scale).toFloat()
             drawRect(
-                color = Color(0xFF2E7D32),
+                color = RemnantGreen,
                 topLeft = Offset(left, top),
                 size = Size(width, height),
                 style = Stroke(width = 2f)
@@ -750,77 +838,25 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPart(
     val height = (part.heightMm * scale).toFloat()
 
     when (part.shape) {
-        PartShape.CIRCLE -> {
-            val center = Offset(left + width / 2f, top + height / 2f)
-            drawCircle(color = color, radius = width / 2f, center = center)
-            drawCircle(
-                color = Color.Black,
-                radius = width / 2f,
-                center = center,
-                style = Stroke(width = 1f)
-            )
-        }
+        PartShape.CIRCLE -> drawCircleShape(
+            Offset(left + width / 2f, top + height / 2f), width / 2f, color
+        )
         PartShape.DXF -> {
-            val points = NestingEngine.placedOutlinePoints(part)
-            if (points.isNotEmpty()) {
-                val path = Path().apply {
-                    points.forEachIndexed { i, p ->
-                        val x = left + (p.x * scale).toFloat()
-                        val y = top + (p.y * scale).toFloat()
-                        if (i == 0) moveTo(x, y) else lineTo(x, y)
-                    }
-                    close()
-                }
-                drawPath(path = path, color = color)
-                drawPath(path = path, color = Color.Black, style = Stroke(width = 1f))
-                // Holes: sheet-coloured circles with a dark outline.
-                for (hole in NestingEngine.placedHoles(part)) {
-                    val cx = left + (hole.center.x * scale).toFloat()
-                    val cy = top + (hole.center.y * scale).toFloat()
-                    val r = (hole.radius * scale).toFloat()
-                    drawCircle(color = SheetBackground, radius = r, center = Offset(cx, cy))
-                    drawCircle(
-                        color = Color.Black,
-                        radius = r,
-                        center = Offset(cx, cy),
-                        style = Stroke(width = 1f)
-                    )
-                }
+            val outline = NestingEngine.placedOutline(part)
+            if (outline != null && outline.points.isNotEmpty()) {
+                drawOutlineShape(outline, left, top, scale, color)
             } else {
-                // No outline stored: fall back to the bounding rectangle.
-                drawRect(
-                    color = color,
-                    topLeft = Offset(left, top),
-                    size = Size(width, height)
-                )
-                drawRect(
-                    color = Color.Black,
-                    topLeft = Offset(left, top),
-                    size = Size(width, height),
-                    style = Stroke(width = 1f)
-                )
+                drawRectShape(Offset(left, top), Size(width, height), color)
             }
         }
-        else -> {
-            drawRect(
-                color = color,
-                topLeft = Offset(left, top),
-                size = Size(width, height)
-            )
-            drawRect(
-                color = Color.Black,
-                topLeft = Offset(left, top),
-                size = Size(width, height),
-                style = Stroke(width = 1f)
-            )
-        }
+        else -> drawRectShape(Offset(left, top), Size(width, height), color)
     }
 
     // ---- Single-line label, fitted to the part ----
-    // Name + dimensions only (never the material name). The text is
-    // measured and shrunk until it fits the part width; if even a small
-    // legible size does not fit, the label is skipped entirely.
-    if (width > 40f && height > 16f) {
+    // Name + dimensions only. Shrunk until it fits the part width; if even
+    // a small legible size does not fit, the label is skipped entirely.
+    val big = if (part.shape == PartShape.DXF) width > 110f && height > 40f else width > 40f && height > 16f
+    if (big) {
         val dims = if (part.shape == PartShape.CIRCLE) {
             "Ø ${formatMm(part.widthMm)}"
         } else {
@@ -829,12 +865,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPart(
         val label = "${part.name} $dims"
         drawIntoCanvas { canvas ->
             val paint = android.graphics.Paint().apply {
-                this.color = android.graphics.Color.BLACK
+                this.color = android.graphics.Color.WHITE
                 textAlign = android.graphics.Paint.Align.CENTER
                 isAntiAlias = true
             }
-            // Largest size that fits the part width (with a small inset)
-            // and stays within half the part height, capped for legibility.
             val maxTextWidth = width * 0.92f
             var textSize = (height * 0.28f).coerceAtMost(44f)
             paint.textSize = textSize

@@ -19,14 +19,15 @@ compose.desktop {
         mainClass = "com.mrafshun20.lasernesting.desktop.MainKt"
         nativeDistributions {
             targetFormats(TargetFormat.Exe, TargetFormat.Msi)
-            packageName = "com.mrafshun20.lasernesting"
-            packageVersion = "2.0.0"
-            description = "Laser Nesting — Bystronic sheet nesting (IGEMS-style)"
+            packageName = "iBebels"
+            packageVersion = "2.1.0"
+            description = "iBebels - laser sheet nesting for Bystronic"
             vendor = "Mrafshun20"
             windows {
                 menu = true
-                menuGroup = "Laser Nesting"
+                menuGroup = "iBebels"
                 shortcut = true
+                iconFile.set(project.file("src/main/resources/ibebels.ico"))
             }
         }
     }

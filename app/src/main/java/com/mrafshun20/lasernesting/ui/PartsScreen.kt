@@ -88,6 +88,7 @@ import com.mrafshun20.lasernesting.data.Material
 import com.mrafshun20.lasernesting.data.PartEntity
 import com.mrafshun20.lasernesting.data.PartShape
 import com.mrafshun20.lasernesting.ui.theme.SheetBackground
+import com.mrafshun20.lasernesting.ui.theme.SheetBorder
 import com.mrafshun20.lasernesting.ui.theme.partColor
 import kotlinx.coroutines.delay
 
@@ -403,7 +404,7 @@ private fun PartPreview(part: PartEntity, color: Color) {
             .size(60.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(SheetBackground)
-            .border(1.dp, Color.Gray, RoundedCornerShape(10.dp))
+            .border(1.dp, SheetBorder, RoundedCornerShape(10.dp))
     ) {
         val pad = 6.dp.toPx()
         val availW = size.width - 2 * pad
@@ -417,70 +418,18 @@ private fun PartPreview(part: PartEntity, color: Color) {
         val ox = pad + (availW - drawW) / 2f
         val oy = pad + (availH - drawH) / 2f
         when (part.shape) {
-            PartShape.CIRCLE -> {
-                val cx = ox + drawW / 2f
-                val cy = oy + drawH / 2f
-                val r = minOf(drawW, drawH) / 2f
-                drawCircle(color = color, radius = r, center = Offset(cx, cy))
-                drawCircle(
-                    color = Color.Black,
-                    radius = r,
-                    center = Offset(cx, cy),
-                    style = Stroke(width = 1f)
-                )
-            }
+            PartShape.CIRCLE -> drawCircleShape(
+                Offset(ox + drawW / 2f, oy + drawH / 2f), minOf(drawW, drawH) / 2f, color
+            )
             PartShape.DXF -> {
                 val outline = part.outline
                 if (outline != null && outline.points.isNotEmpty()) {
-                    val path = Path().apply {
-                        outline.points.forEachIndexed { i, p ->
-                            val x = ox + (p.x * scale).toFloat()
-                            val y = oy + (p.y * scale).toFloat()
-                            if (i == 0) moveTo(x, y) else lineTo(x, y)
-                        }
-                        close()
-                    }
-                    drawPath(path = path, color = color)
-                    drawPath(path = path, color = Color.Black, style = Stroke(width = 1f))
-                    for (hole in outline.holes) {
-                        val cx = ox + (hole.center.x * scale).toFloat()
-                        val cy = oy + (hole.center.y * scale).toFloat()
-                        val r = (hole.radius * scale).toFloat()
-                        drawCircle(color = SheetBackground, radius = r, center = Offset(cx, cy))
-                        drawCircle(
-                            color = Color.Black,
-                            radius = r,
-                            center = Offset(cx, cy),
-                            style = Stroke(width = 1f)
-                        )
-                    }
+                    drawOutlineShape(outline, ox, oy, scale, color)
                 } else {
-                    drawRect(
-                        color = color,
-                        topLeft = Offset(ox, oy),
-                        size = Size(drawW, drawH)
-                    )
-                    drawRect(
-                        color = Color.Black,
-                        topLeft = Offset(ox, oy),
-                        size = Size(drawW, drawH),
-                        style = Stroke(width = 1f)
-                    )
+                    drawRectShape(Offset(ox, oy), Size(drawW, drawH), color)
                 }
             }
-            else -> {
-                drawRect(
-                    color = color,
-                    topLeft = Offset(ox, oy),
-                    size = Size(drawW, drawH)
-                )
-                drawRect(
-                    color = Color.Black,
-                    topLeft = Offset(ox, oy),
-                    size = Size(drawW, drawH),
-                    style = Stroke(width = 1f)
-                )
-            }
+            else -> drawRectShape(Offset(ox, oy), Size(drawW, drawH), color)
         }
     }
 }

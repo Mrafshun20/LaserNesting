@@ -44,6 +44,16 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // First launch: Persian is the default language.
+        val prefs = getSharedPreferences("ibebels", MODE_PRIVATE)
+        if (!prefs.getBoolean("lang_init", false)) {
+            prefs.edit().putBoolean("lang_init", true).apply()
+            if (androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().isEmpty) {
+                androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                    androidx.core.os.LocaleListCompat.forLanguageTags("fa")
+                )
+            }
+        }
         setContent {
             LaserNestingTheme {
                 val viewModel: NestingViewModel = viewModel(

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Laser Nesting</string>
-    <string name="app_subtitle">Bystronic sheet nesting</string>
+    <string name="app_name">iBebels</string>
+    <string name="app_subtitle">Laser sheet nesting</string>
 
     <string name="tab_parts">Parts</string>
     <string name="tab_setup">Setup</string>
@@ -103,4 +103,26 @@
     <string name="dxf_imported">Imported %1$d part(s) from %2$s.</string>
     <string name="dxf_no_parts">No closed parts were found in this DXF file.</string>
     <string name="dxf_read_error">Could not read this DXF file.</string>
+    <string name="setup_engine">Nesting engine</string>
+    <string name="engine_auto">Auto (best of all)</string>
+    <string name="engine_true">True shape</string>
+    <string name="engine_box">Fast box</string>
+    <string name="engine_hint_auto">Tries every strategy and keeps the best layout.</string>
+    <string name="engine_hint_true">Parts interlock and nest inside holes and cutouts of other parts.</string>
+    <string name="engine_hint_box">Instant. Best for rectangular parts.</string>
+    <string name="setup_precision">Precision</string>
+    <string name="prec_auto">Auto</string>
+    <string name="prec_fine">Fine 1 mm</string>
+    <string name="prec_normal">Normal 2 mm</string>
+    <string name="prec_fast">Fast 3 mm</string>
+    <string name="setup_rot_step">Fine rotation (DXF parts)</string>
+    <string name="rot_off">Off</string>
+    <string name="setup_pierce_time">Pierce time per contour</string>
+    <string name="nest_pierces">Pierces</string>
+    <string name="nest_weight">Sheet weight</string>
+    <string name="nest_engine_info">Engine: %1$s • %2$d ms</string>
+    <string name="nest_export_dxf">DXF for machine</string>
+    <string name="nest_export_report">Report (HTML)</string>
+    <string name="nest_share_dxf">Share DXF</string>
+    <string name="nest_share_report">Share report</string>
 </resources>

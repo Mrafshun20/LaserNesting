@@ -15,10 +15,10 @@ enum class PartShape {
 }
 
 /** Sheet/part material. */
-enum class Material(val displayName: String) {
-    MILD_STEEL("Mild Steel"),
-    STAINLESS_STEEL("Stainless Steel"),
-    ALUMINIUM("Aluminium")
+enum class Material(val displayName: String, val densityGcm3: Double = 7.85) {
+    MILD_STEEL("Mild Steel", 7.85),
+    STAINLESS_STEEL("Stainless Steel", 7.93),
+    ALUMINIUM("Aluminium", 2.70)
 }
 
 /**
@@ -30,11 +30,24 @@ data class PartOutline(
     val points: List<Point>,
     val holes: List<CircleHole> = emptyList(),
     val widthMm: Double,
-    val heightMm: Double
+    val heightMm: Double,
+    /**
+     * Non-circular inner contours (slots, windows, notches...) as closed
+     * polylines, same coordinates as [points]. They are cut, drawn and
+     * excluded from the part area, and other parts can nest inside them.
+     */
+    val cutouts: List<List<Point>> = emptyList()
 ) {
+    /** Number of inner contours (holes + cutouts). */
+    val innerContourCount: Int get() = holes.size + cutouts.size
+
     companion object {
         /** Builds an outline from raw points, normalizing min corner to (0, 0). */
-        fun normalized(points: List<Point>, holes: List<CircleHole> = emptyList()): PartOutline {
+        fun normalized(
+            points: List<Point>,
+            holes: List<CircleHole> = emptyList(),
+            cutouts: List<List<Point>> = emptyList()
+        ): PartOutline {
             if (points.isEmpty()) return PartOutline(emptyList(), emptyList(), 0.0, 0.0)
             val minX = points.minOf { it.x }
             val minY = points.minOf { it.y }
@@ -44,7 +57,10 @@ data class PartOutline(
             val shiftedHoles = holes.map {
                 CircleHole(Point(it.center.x - minX, it.center.y - minY), it.radius)
             }
-            return PartOutline(shifted, shiftedHoles, maxX - minX, maxY - minY)
+            val shiftedCutouts = cutouts.map { loop ->
+                loop.map { Point(it.x - minX, it.y - minY) }
+            }
+            return PartOutline(shifted, shiftedHoles, maxX - minX, maxY - minY, shiftedCutouts)
         }
     }
 }

@@ -7,18 +7,22 @@ import com.mrafshun20.lasernesting.data.PartShape
 import com.mrafshun20.lasernesting.data.SheetPreset
 import com.mrafshun20.lasernesting.dxf.DxfParser
 import com.mrafshun20.lasernesting.dxf.toPartOutline
+import com.mrafshun20.lasernesting.export.ExportCore
+import com.mrafshun20.lasernesting.nesting.NestMode
+import com.mrafshun20.lasernesting.nesting.NestOptions
 import com.mrafshun20.lasernesting.nesting.NestResult
 import com.mrafshun20.lasernesting.nesting.NestingEngine
 import com.mrafshun20.lasernesting.nesting.PartInput
+import com.mrafshun20.lasernesting.util.Fmt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.io.File
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Desktop settings. Mirrors the Android SettingsEntity (same defaults).
- */
+/** Desktop settings. Persian is the default language. */
 data class DesktopSettings(
     val machinePreset: MachinePreset = MachinePreset.BYSTAR_FIBER_3015,
     val sheetPreset: SheetPreset = SheetPreset.SHEET_2000x1000,
@@ -32,169 +36,23 @@ data class DesktopSettings(
     val marginMm: Double = 10.0,
     val allowRotation: Boolean = true,
     val cuttingSpeedMmPerMin: Double = 6000.0,
-    /** "system" (follow the OS), "en", or "fa". */
-    val language: String = "system"
+    /** "fa" (default), "en", or "system". */
+    val language: String = "fa",
+    val nestMode: NestMode = NestMode.AUTO,
+    /** Raster cell for true-shape nesting in mm; 0 = automatic. */
+    val precisionMm: Double = 0.0,
+    /** Extra rotation step for DXF parts (0 = off). */
+    val rotationStepDeg: Int = 0,
+    val pierceTimeSec: Double = 0.5
 )
 
-/** Bilingual UI strings (English / Persian) for the desktop app. */
-object DesktopStrings {
-    private val en = mapOf(
-        "app_title" to "Laser Nesting",
-        "app_subtitle" to "Bystronic sheet nesting",
-        "tab_parts" to "Parts",
-        "tab_setup" to "Setup",
-        "tab_nest" to "Nest",
-        "import_dxf" to "Import DXF",
-        "no_parts" to "No parts yet — import a DXF file.",
-        "save_project" to "Save project",
-        "open_project" to "Open project",
-        "language" to "Language",
-        "lang_system" to "System default",
-        "lang_en" to "English",
-        "lang_fa" to "Persian",
-        "machine" to "Machine",
-        "sheet" to "Sheet",
-        "nesting" to "Nesting",
-        "cutting" to "Cutting",
-        "sheet_width" to "Sheet width (mm)",
-        "sheet_length" to "Sheet length (mm)",
-        "sheet_thickness" to "Sheet thickness (mm)",
-        "sheet_count" to "Number of sheets",
-        "kerf" to "Kerf (mm)",
-        "gap" to "Part-to-part gap (mm)",
-        "margin" to "Sheet edge margin (mm)",
-        "allow_rotation" to "Allow rotation",
-        "cutting_speed" to "Cutting speed (mm/min)",
-        "run_nest" to "Auto-nest parts",
-        "nesting_running" to "Nesting…",
-        "utilization" to "Material utilization",
-        "sheets" to "Sheets",
-        "cut_length" to "Cut length",
-        "est_time" to "Est. time",
-        "placed" to "Placed",
-        "unplaced" to "Unplaced parts",
-        "reason_invalid" to "Invalid size or quantity",
-        "reason_no_area" to "No usable area — reduce the edge margin",
-        "reason_no_space" to "No free space left on the available sheets",
-        "reason_no_fit" to "Does not fit the sheet",
-        "remnant" to "Remnant",
-        "zoom_in" to "Zoom in",
-        "zoom_out" to "Zoom out",
-        "zoom_fit" to "Fit",
-        "zoom_hint" to "Scroll to zoom • Drag to pan",
-        "export_csv" to "Cut list (CSV)",
-        "export_svg" to "Layout (SVG)",
-        "name" to "Name",
-        "width" to "Width (mm)",
-        "height" to "Height (mm)",
-        "diameter" to "Diameter (mm)",
-        "quantity" to "Quantity",
-        "thickness" to "Thickness (mm)",
-        "priority" to "Priority",
-        "save" to "Save",
-        "cancel" to "Cancel",
-        "delete" to "Delete",
-        "edit" to "Edit",
-        "edit_part" to "Edit part",
-        "rectangle" to "Rectangle",
-        "circle" to "Circle",
-        "dxf_outline" to "DXF outline",
-        "holes" to "holes",
-        "dxf_imported" to "Imported %d part(s) from %s.",
-        "dxf_no_parts" to "No closed parts were found in this DXF file.",
-        "dxf_read_error" to "Could not read this DXF file.",
-        "project_saved" to "Project saved.",
-        "project_loaded" to "Project loaded.",
-        "project_error" to "Could not open that project file."
-    )
-    private val fa = mapOf(
-        "app_title" to "چیدمان لیزر",
-        "app_subtitle" to "چیدمان ورق بایسترونیک",
-        "tab_parts" to "قطعات",
-        "tab_setup" to "تنظیمات",
-        "tab_nest" to "چیدمان",
-        "import_dxf" to "وارد کردن DXF",
-        "no_parts" to "هنوز قطعه‌ای نیست — یک فایل DXF وارد کنید.",
-        "save_project" to "ذخیره پروژه",
-        "open_project" to "باز کردن پروژه",
-        "language" to "زبان",
-        "lang_system" to "پیش‌فرض سیستم",
-        "lang_en" to "انگلیسی",
-        "lang_fa" to "فارسی",
-        "machine" to "دستگاه",
-        "sheet" to "ورق",
-        "nesting" to "چیدمان",
-        "cutting" to "برش",
-        "sheet_width" to "عرض ورق (میلی‌متر)",
-        "sheet_length" to "طول ورق (میلی‌متر)",
-        "sheet_thickness" to "ضخامت ورق (میلی‌متر)",
-        "sheet_count" to "تعداد ورق",
-        "kerf" to "کرف (میلی‌متر)",
-        "gap" to "فاصله بین قطعات (میلی‌متر)",
-        "margin" to "حاشیه لبه ورق (میلی‌متر)",
-        "allow_rotation" to "اجازه چرخش",
-        "cutting_speed" to "سرعت برش (میلی‌متر/دقیقه)",
-        "run_nest" to "چیدمان خودکار قطعات",
-        "nesting_running" to "در حال چیدمان…",
-        "utilization" to "بهره‌وری مواد",
-        "sheets" to "ورق‌ها",
-        "cut_length" to "طول برش",
-        "est_time" to "زمان تقریبی",
-        "placed" to "چیده شده",
-        "unplaced" to "قطعات چیده‌نشده",
-        "reason_invalid" to "اندازه یا تعداد نامعتبر است",
-        "reason_no_area" to "ناحیه قابل‌استفاده‌ای نیست — حاشیه لبه را کم کنید",
-        "reason_no_space" to "در ورق‌های موجود جای خالی نمانده است",
-        "reason_no_fit" to "در ورق جا نمی‌شود",
-        "remnant" to "باقیمانده",
-        "zoom_in" to "بزرگ‌نمایی",
-        "zoom_out" to "کوچک‌نمایی",
-        "zoom_fit" to "نمایش کامل",
-        "zoom_hint" to "برای بزرگنمایی اسکرول کنید • برای جابه‌جایی بکشید",
-        "export_csv" to "لیست برش (CSV)",
-        "export_svg" to "نقشه چیدمان (SVG)",
-        "name" to "نام",
-        "width" to "عرض (میلی‌متر)",
-        "height" to "ارتفاع (میلی‌متر)",
-        "diameter" to "قطر (میلی‌متر)",
-        "quantity" to "تعداد",
-        "thickness" to "ضخامت (میلی‌متر)",
-        "priority" to "اولویت",
-        "save" to "ذخیره",
-        "cancel" to "لغو",
-        "delete" to "حذف",
-        "edit" to "ویرایش",
-        "edit_part" to "ویرایش قطعه",
-        "rectangle" to "مستطیل",
-        "circle" to "دایره",
-        "dxf_outline" to "خط DXF",
-        "holes" to "سوراخ",
-        "dxf_imported" to "%d قطعه از %s وارد شد.",
-        "dxf_no_parts" to "در این فایل DXF هیچ قطعه بسته‌ای پیدا نشد.",
-        "dxf_read_error" to "خواندن این فایل DXF ممکن نشد.",
-        "project_saved" to "پروژه ذخیره شد.",
-        "project_loaded" to "پروژه باز شد.",
-        "project_error" to "باز کردن این فایل پروژه ممکن نشد."
-    )
-
-    fun isPersian(language: String): Boolean {
-        return when (language) {
-            "fa" -> true
-            "en" -> false
-            else -> java.util.Locale.getDefault().language == "fa"
-        }
-    }
-
-    fun get(key: String, language: String): String {
-        val table = if (isPersian(language)) fa else en
-        return table[key] ?: en[key] ?: key
-    }
-}
+/** Folder for the autosave and default project (~/iBebels). */
+fun appDir(): File = File(System.getProperty("user.home") ?: ".", "iBebels")
 
 /**
- * Desktop state: parts, settings, nesting result, messages.
- * Parts are held as core [PartInput] values (with their true DXF outline);
- * the project file persists them as JSON in the user's home directory.
+ * Desktop state: parts, settings, nesting result, messages. Parts are core
+ * [PartInput] values (with their true DXF outline). Everything is autosaved
+ * to ~/iBebels/autosave.json and restored on start.
  */
 class DesktopState {
     private val _parts = MutableStateFlow<List<PartInput>>(emptyList())
@@ -212,14 +70,40 @@ class DesktopState {
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
-    private var nextId = 1L
+    private val _nesting = MutableStateFlow(false)
+    val nesting: StateFlow<Boolean> = _nesting.asStateFlow()
 
-    fun t(key: String): String =
-        DesktopStrings.get(key, _settings.value.language)
+    private val _progress = MutableStateFlow(0f)
+    val progress: StateFlow<Float> = _progress.asStateFlow()
+
+    /** Increments each time a nesting run finishes, so the UI can open the Nest tab. */
+    private val _finishedRuns = MutableStateFlow(0)
+    val finishedRuns: StateFlow<Int> = _finishedRuns.asStateFlow()
+
+    private val cancelFlag = AtomicBoolean(false)
+    private var nextId = 1L
+    private val autosaveFile: File get() = File(appDir(), "autosave.json")
+
+    init {
+        if (autosaveFile.exists()) loadProject(autosaveFile, silent = true)
+    }
+
+    fun t(key: String): String = DesktopStrings.get(key, _settings.value.language)
+
+    /** Translated string with %s / %d arguments (ASCII digits always). */
+    fun tf(key: String, vararg args: Any): String =
+        String.format(Locale.ROOT, t(key), *args)
+
+    val isPersian: Boolean get() = DesktopStrings.isPersian(_settings.value.language)
+
+    private fun autosave() {
+        saveProject(autosaveFile, silent = true)
+    }
 
     fun updateSettings(transform: (DesktopSettings) -> DesktopSettings) {
         _settings.update(transform)
         _nestResult.value = null
+        autosave()
     }
 
     fun upsertPart(part: PartInput) {
@@ -234,11 +118,23 @@ class DesktopState {
             }
         }
         _nestResult.value = null
+        autosave()
+    }
+
+    fun setQuantity(part: PartInput, quantity: Int) {
+        upsertPart(part.copy(quantity = quantity.coerceIn(1, 99_999)))
     }
 
     fun deletePart(part: PartInput) {
         _parts.update { it.filterNot { p -> p.id == part.id } }
         _nestResult.value = null
+        autosave()
+    }
+
+    fun clearParts() {
+        _parts.value = emptyList()
+        _nestResult.value = null
+        autosave()
     }
 
     /** Imports parts from a DXF file on disk. */
@@ -251,6 +147,7 @@ class DesktopState {
             _message.value = result.warnings.firstOrNull() ?: t("dxf_no_parts")
             return
         }
+        val s = _settings.value
         val inputs = result.parts.map { dxfPart ->
             PartInput(
                 id = nextId++,
@@ -259,8 +156,8 @@ class DesktopState {
                 widthMm = dxfPart.widthMm,
                 heightMm = dxfPart.heightMm,
                 quantity = 1,
-                material = Material.MILD_STEEL,
-                thicknessMm = 3.0,
+                material = s.sheetMaterial,
+                thicknessMm = s.sheetThicknessMm,
                 allowedRotations = setOf(0, 90, 180, 270),
                 priority = 0,
                 outline = dxfPart.toPartOutline()
@@ -268,41 +165,49 @@ class DesktopState {
         }
         _parts.update { it + inputs }
         _nestResult.value = null
-        _message.value = if (result.warnings.isEmpty()) {
-            t("dxf_imported").format(inputs.size, file.name)
-        } else {
-            t("dxf_imported").format(inputs.size, file.name) + " " + result.warnings.first()
-        }
+        _message.value = tf("dxf_imported", inputs.size, file.name)
+        autosave()
     }
 
     fun clearMessage() {
         _message.value = null
     }
 
+    fun postMessage(text: String) {
+        _message.value = text
+    }
+
+    fun cancelNesting() {
+        cancelFlag.set(true)
+    }
+
+    /** Runs the nesting on a background thread so the window stays responsive. */
     fun runNesting() {
+        if (_nesting.value) return
         val s = _settings.value
         val currentParts = _parts.value
         if (currentParts.isEmpty()) {
-            _nestError.value = "Add at least one part first."
+            _nestError.value = t("need_parts")
             _nestResult.value = null
             return
         }
         if (s.sheetWidthMm <= 0 || s.sheetLengthMm <= 0) {
-            _nestError.value = "Sheet size must be greater than zero."
+            _nestError.value = t("bad_sheet")
             _nestResult.value = null
             return
         }
         if (s.sheetWidthMm > s.machinePreset.maxWidthMm ||
             s.sheetLengthMm > s.machinePreset.maxLengthMm
         ) {
-            _nestError.value = "Sheet is larger than the " +
-                "${s.machinePreset.displayName} working area."
+            _nestError.value = tf("too_big", s.machinePreset.displayName)
             _nestResult.value = null
             return
         }
         _nestError.value = null
-        _nestResult.value = NestingEngine.nest(
-            parts = currentParts,
+        _nesting.value = true
+        _progress.value = 0f
+        cancelFlag.set(false)
+        val options = NestOptions(
             sheetWidthMm = s.sheetWidthMm,
             sheetLengthMm = s.sheetLengthMm,
             sheetCount = s.sheetCount,
@@ -310,18 +215,83 @@ class DesktopState {
             gapMm = s.gapMm,
             marginMm = s.marginMm,
             allowRotationGlobal = s.allowRotation,
-            cuttingSpeedMmPerMin = s.cuttingSpeedMmPerMin
+            cuttingSpeedMmPerMin = s.cuttingSpeedMmPerMin,
+            mode = s.nestMode,
+            precisionMm = s.precisionMm,
+            rotationStepDeg = s.rotationStepDeg,
+            pierceTimeSec = s.pierceTimeSec,
+            sheetMaterial = s.sheetMaterial,
+            sheetThicknessMm = s.sheetThicknessMm,
+            isCancelled = { cancelFlag.get() },
+            onProgress = { _progress.value = it }
         )
+        val worker = Thread {
+            try {
+                val result = NestingEngine.nest(currentParts, options)
+                if (cancelFlag.get()) {
+                    _message.value = t("nest_cancelled")
+                } else {
+                    _nestResult.value = result
+                    _finishedRuns.update { it + 1 }
+                }
+            } catch (e: Throwable) {
+                _nestError.value = e.message ?: e.javaClass.simpleName
+            } finally {
+                _nesting.value = false
+            }
+        }
+        worker.isDaemon = true
+        worker.start()
+    }
+
+    // ---- Exports ----
+
+    private fun withResult(block: (NestResult, DesktopSettings) -> Unit) {
+        val r = _nestResult.value ?: return
+        runCatching { block(r, _settings.value) }
+            .onFailure { _message.value = it.message ?: t("project_error") }
+    }
+
+    fun exportCsv(file: File) = withResult { r, s ->
+        file.writeText(ExportCore.cutListCsv(r, s.sheetWidthMm, s.sheetLengthMm))
+        _message.value = tf("exported", file.name)
+    }
+
+    fun exportSvg(file: File) = withResult { r, s ->
+        file.writeText(ExportCore.nestSvg(r, s.sheetWidthMm, s.sheetLengthMm))
+        _message.value = tf("exported", file.name)
+    }
+
+    /** Writes one DXF per sheet: name.dxf for a single sheet, name_sheet1.dxf ... otherwise. */
+    fun exportDxf(file: File) = withResult { r, s ->
+        val base = file.name.removeSuffix(".dxf").removeSuffix(".DXF")
+        val dir = file.parentFile ?: File(".")
+        val single = r.sheets.size == 1
+        for (sheet in r.sheets) {
+            val name = if (single) "$base.dxf" else "${base}_sheet${sheet.index + 1}.dxf"
+            File(dir, name).writeText(ExportCore.sheetDxf(sheet, s.sheetWidthMm, s.sheetLengthMm))
+        }
+        _message.value = tf("exported", if (single) "$base.dxf" else "${base}_sheet*.dxf")
+    }
+
+    fun exportReport(file: File) = withResult { r, s ->
+        val material = "${s.sheetMaterial.displayName} ${Fmt.mm(s.sheetThicknessMm)} mm • " +
+            "${Fmt.mm(s.sheetWidthMm)} × ${Fmt.mm(s.sheetLengthMm)} mm × ${s.sheetCount}"
+        file.writeText(
+            ExportCore.reportHtml(
+                r, s.sheetWidthMm, s.sheetLengthMm, "iBebels", s.machinePreset.displayName,
+                material, isPersian
+            )
+        )
+        _message.value = tf("exported", file.name)
+        runCatching { java.awt.Desktop.getDesktop().browse(file.toURI()) }
     }
 
     // ---- Project file (JSON) ----
 
-    fun defaultProjectFile(): File {
-        val home = System.getProperty("user.home") ?: "."
-        return File(home, "LaserNesting-project.json")
-    }
+    fun defaultProjectFile(): File = File(appDir(), "project.ibebels.json")
 
-    fun saveProject(file: File): Boolean {
+    fun saveProject(file: File, silent: Boolean = false): Boolean {
         return runCatching {
             val s = _settings.value
             val partsJson = JsonArray(
@@ -363,20 +333,25 @@ class DesktopState {
                     "marginMm" to Json.num(s.marginMm),
                     "allowRotation" to Json.bool(s.allowRotation),
                     "cuttingSpeedMmPerMin" to Json.num(s.cuttingSpeedMmPerMin),
-                    "language" to Json.str(s.language)
+                    "language" to Json.str(s.language),
+                    "nestMode" to Json.str(s.nestMode.name),
+                    "precisionMm" to Json.num(s.precisionMm),
+                    "rotationStepDeg" to Json.num(s.rotationStepDeg),
+                    "pierceTimeSec" to Json.num(s.pierceTimeSec)
                 ),
                 "parts" to partsJson
             )
+            file.parentFile?.mkdirs()
             file.writeText(Json.stringify(root))
-            _message.value = t("project_saved")
+            if (!silent) _message.value = t("project_saved")
             true
         }.getOrElse {
-            _message.value = t("project_error")
+            if (!silent) _message.value = t("project_error")
             false
         }
     }
 
-    fun loadProject(file: File): Boolean {
+    fun loadProject(file: File, silent: Boolean = false): Boolean {
         return runCatching {
             val root = Json.parse(file.readText()) as? JsonObject
                 ?: return@runCatching false
@@ -402,7 +377,13 @@ class DesktopState {
                     allowRotation = settingsObj.bool("allowRotation") ?: true,
                     cuttingSpeedMmPerMin = settingsObj.double("cuttingSpeedMmPerMin")
                         ?: 6000.0,
-                    language = settingsObj.string("language") ?: "system"
+                    language = settingsObj.string("language") ?: "fa",
+                    nestMode = settingsObj.string("nestMode")
+                        ?.let { runCatching { NestMode.valueOf(it) }.getOrNull() }
+                        ?: NestMode.AUTO,
+                    precisionMm = settingsObj.double("precisionMm") ?: 0.0,
+                    rotationStepDeg = settingsObj.int("rotationStepDeg") ?: 0,
+                    pierceTimeSec = settingsObj.double("pierceTimeSec") ?: 0.5
                 )
             }
             val loaded = mutableListOf<PartInput>()
@@ -441,29 +422,25 @@ class DesktopState {
             nextId = maxId + 1
             _parts.value = loaded
             _nestResult.value = null
-            _message.value = t("project_loaded")
+            if (!silent) _message.value = t("project_loaded")
             true
         }.getOrElse {
-            _message.value = t("project_error")
+            if (!silent) _message.value = t("project_error")
             false
         }
     }
 }
 
-/** Formats a millimetre value without a trailing ".0". */
-fun formatMm(value: Double): String {
-    return if (value == value.toLong().toDouble()) {
-        value.toLong().toString()
-    } else {
-        "%.1f".format(value)
-    }
-}
+/** Formats a millimetre value without a trailing ".0" (ASCII digits always). */
+fun formatMm(value: Double): String = Fmt.mm(value)
 
-/** Formats a duration in minutes as "12 min" or "1 h 25 min". */
-fun formatMinutes(minutes: Double): String {
-    if (minutes <= 0) return "0 min"
+/** Formats a duration in minutes as "12 min" / "1 h 25 min" (or Persian). */
+fun formatMinutes(minutes: Double, persian: Boolean = false): String {
+    val h = if (persian) "ساعت" else "h"
+    val m = if (persian) "دقیقه" else "min"
+    if (minutes <= 0) return "0 $m"
     val totalSeconds = (minutes * 60).toInt()
     val hours = totalSeconds / 3600
     val mins = (totalSeconds % 3600) / 60
-    return if (hours > 0) "$hours h $mins min" else "$mins min"
+    return if (hours > 0) "$hours $h $mins $m" else "$mins $m"
 }

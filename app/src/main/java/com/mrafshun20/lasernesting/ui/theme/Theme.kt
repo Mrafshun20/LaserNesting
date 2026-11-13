@@ -1,12 +1,14 @@
 package com.mrafshun20.lasernesting.ui.theme
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -22,7 +24,7 @@ val VazirmatnFamily = FontFamily(
     Font(R.font.vazirmatn_bold, FontWeight.Bold)
 )
 
-private val PersianTypography = Typography().let { base ->
+private val AppTypography = Typography().let { base ->
     Typography(
         displayLarge = base.displayLarge.copy(fontFamily = VazirmatnFamily),
         displayMedium = base.displayMedium.copy(fontFamily = VazirmatnFamily),
@@ -49,13 +51,13 @@ private val PersianTypography = Typography().let { base ->
  */
 private val DarkColors = darkColorScheme(
     primary = AmberPrimary,
-    onPrimary = Color.Black,
-    primaryContainer = Color(0xFF5C4300),
-    onPrimaryContainer = Color(0xFFFFE082),
+    onPrimary = Color(0xFF1A0D00),
+    primaryContainer = Color(0xFF3B1F08),
+    onPrimaryContainer = Color(0xFFFFD7B5),
     secondary = SteelBlue,
     onSecondary = Color.Black,
-    secondaryContainer = Color(0xFF1E3A4C),
-    onSecondaryContainer = Color(0xFFBBDEFB),
+    secondaryContainer = Color(0xFF14354A),
+    onSecondaryContainer = Color(0xFFCDEBFF),
     tertiary = SteelTeal,
     onTertiary = Color.Black,
     background = DarkBackground,
@@ -64,11 +66,12 @@ private val DarkColors = darkColorScheme(
     onSurface = DarkOnSurface,
     surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = DarkOnSurfaceVariant,
-    error = Color(0xFFFF5252),
+    error = Color(0xFFFF5D6C),
     onError = Color.Black,
-    errorContainer = Color(0xFF5C1A1A),
-    onErrorContainer = Color(0xFFFFCDD2),
-    outline = Color(0xFF3A3F44)
+    errorContainer = Color(0xFF4A1620),
+    onErrorContainer = Color(0xFFFFD6DB),
+    outline = OutlineDark,
+    outlineVariant = OutlineDark
 )
 
 private val LightColors = lightColorScheme(
@@ -79,18 +82,25 @@ private val LightColors = lightColorScheme(
     surface = Color.White
 )
 
+/** Rounded, friendly shapes for every Material component. */
+private val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(18.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(32.dp)
+)
+
 @Composable
 fun LaserNestingTheme(
     darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    // Persian UI uses the bundled Vazirmatn font; English keeps the
-    // system font. The locale follows the in-app language selector.
-    val configuration = LocalConfiguration.current
-    val isPersian = configuration.locales.get(0)?.language == "fa"
+    // Vazirmatn covers Persian and Latin, so it is used for every language.
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = if (isPersian) PersianTypography else Typography(),
+        typography = AppTypography,
+        shapes = AppShapes,
         content = content
     )
 }

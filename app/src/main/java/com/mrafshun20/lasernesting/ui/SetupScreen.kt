@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Layers
@@ -226,6 +227,60 @@ fun SetupScreen(viewModel: NestingViewModel) {
             )
         }
 
+        SectionCard(icon = Icons.Filled.AutoAwesome, title = stringResource(R.string.setup_engine)) {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    "AUTO" to R.string.engine_auto,
+                    "TRUE_SHAPE" to R.string.engine_true,
+                    "FAST_BOX" to R.string.engine_box
+                ).forEach { (mode, label) ->
+                    FilterChip(
+                        selected = settings.nestMode == mode,
+                        onClick = { viewModel.updateSettings { it.copy(nestMode = mode) } },
+                        label = { Text(stringResource(label), maxLines = 1) }
+                    )
+                }
+            }
+            Text(
+                text = stringResource(
+                    when (settings.nestMode) {
+                        "TRUE_SHAPE" -> R.string.engine_hint_true
+                        "FAST_BOX" -> R.string.engine_hint_box
+                        else -> R.string.engine_hint_auto
+                    }
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (settings.nestMode != "FAST_BOX") {
+                Text(
+                    text = stringResource(R.string.setup_precision),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        0.0 to R.string.prec_auto,
+                        1.0 to R.string.prec_fine,
+                        2.0 to R.string.prec_normal,
+                        3.0 to R.string.prec_fast
+                    ).forEach { (mm, label) ->
+                        FilterChip(
+                            selected = settings.precisionMm == mm,
+                            onClick = { viewModel.updateSettings { it.copy(precisionMm = mm) } },
+                            label = { Text(stringResource(label), maxLines = 1) }
+                        )
+                    }
+                }
+            }
+        }
+
         SectionCard(icon = Icons.Filled.Dashboard, title = stringResource(R.string.setup_nesting)) {
             DecimalField(
                 label = stringResource(R.string.setup_kerf),
@@ -263,6 +318,30 @@ fun SetupScreen(viewModel: NestingViewModel) {
                     }
                 )
             }
+            if (settings.allowRotation && settings.nestMode != "FAST_BOX") {
+                Text(
+                    text = stringResource(R.string.setup_rot_step),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = settings.rotationStepDeg == 0,
+                        onClick = { viewModel.updateSettings { it.copy(rotationStepDeg = 0) } },
+                        label = { Text(stringResource(R.string.rot_off)) }
+                    )
+                    listOf(45, 30, 15).forEach { deg ->
+                        FilterChip(
+                            selected = settings.rotationStepDeg == deg,
+                            onClick = { viewModel.updateSettings { it.copy(rotationStepDeg = deg) } },
+                            label = { Text("$deg°") }
+                        )
+                    }
+                }
+            }
         }
 
         SectionCard(icon = Icons.Filled.Speed, title = stringResource(R.string.setup_cutting)) {
@@ -272,6 +351,14 @@ fun SetupScreen(viewModel: NestingViewModel) {
                 suffix = "mm/min",
                 onValueChange = { value ->
                     viewModel.updateSettings { it.copy(cuttingSpeedMmPerMin = value) }
+                }
+            )
+            DecimalField(
+                label = stringResource(R.string.setup_pierce_time),
+                value = settings.pierceTimeSec,
+                suffix = "s",
+                onValueChange = { value ->
+                    viewModel.updateSettings { it.copy(pierceTimeSec = value) }
                 }
             )
             Text(

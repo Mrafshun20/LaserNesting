@@ -12,30 +12,59 @@ data class Rect(
     val right: Double get() = x + width
     val bottom: Double get() = y + height
 
+    /**
+     * Overlap test with a tolerance: rectangles that merely touch, or that
+     * overlap by less than [EPS] because of floating-point rounding, do not
+     * intersect. Without it a one-ulp sliver can re-split forever.
+     */
     fun intersects(other: Rect): Boolean =
-        x < other.right && right > other.x && y < other.bottom && bottom > other.y
+        x < other.right - EPS && right - EPS > other.x &&
+            y < other.bottom - EPS && bottom - EPS > other.y
 
     fun contains(other: Rect): Boolean =
-        x <= other.x && y <= other.y && right >= other.right && bottom >= other.bottom
+        x <= other.x + EPS && y <= other.y + EPS &&
+            right >= other.right - EPS && bottom >= other.bottom - EPS
+
+    companion object {
+        const val EPS = 1e-6
+    }
+}
+
+/** Placement rule of the bounding-box packer (lower score = better). */
+enum class RectHeuristic {
+    /** Tightest fit on the shorter leftover side (classic BSSF). */
+    BEST_SHORT_SIDE,
+
+    /** Tightest fit on the longer leftover side. */
+    BEST_LONG_SIDE,
+
+    /** Smallest free rectangle that holds the part. */
+    BEST_AREA,
+
+    /** Lowest, then leftmost (compact toward the sheet origin). */
+    BOTTOM_LEFT
 }
 
 /**
- * MaxRects bin-packing (Best Short Side Fit heuristic), pure Kotlin.
- * Rectangles are placed into the free space; each placement splits the
- * free rectangles it overlaps and prunes rectangles contained in others.
- * This is the classic algorithm used by nesting tools.
+ * MaxRects bin-packing, pure Kotlin. Rectangles are placed into the free
+ * space; each placement splits the free rectangles it overlaps and prunes
+ * rectangles contained in others. Several placement heuristics are
+ * available; the nesting engine tries a few and keeps the best result.
  */
 class MaxRectsBin(val width: Double, val height: Double) {
 
-    /** Result of a successful insert, with its best-fit score. */
+    /** Result of a successful insert, with its two-part score. */
     data class Placement(
         val rect: Rect,
         val rotated: Boolean,
-        /** Leftover short side of the free rectangle used (smaller is tighter). */
-        val shortSideLeftover: Double = 0.0,
-        /** Leftover long side of the free rectangle used. */
-        val longSideLeftover: Double = 0.0
-    )
+        /** Primary score (lower is better). */
+        val score1: Double = 0.0,
+        /** Secondary score, breaks ties (lower is better). */
+        val score2: Double = 0.0
+    ) {
+        val shortSideLeftover: Double get() = score1
+        val longSideLeftover: Double get() = score2
+    }
 
     val usedRectangles = mutableListOf<Rect>()
     private val freeRectangles = mutableListOf(Rect(0.0, 0.0, width, height))
@@ -43,61 +72,68 @@ class MaxRectsBin(val width: Double, val height: Double) {
     /** Snapshot of the current free rectangles (for remnant reporting). */
     fun freeRectanglesSnapshot(): List<Rect> = freeRectangles.toList()
 
+    private fun scoreOf(
+        free: Rect, w: Double, h: Double, heuristic: RectHeuristic
+    ): Pair<Double, Double> {
+        val leftoverH = free.width - w
+        val leftoverV = free.height - h
+        val shortSide = minOf(leftoverH, leftoverV)
+        val longSide = maxOf(leftoverH, leftoverV)
+        return when (heuristic) {
+            RectHeuristic.BEST_SHORT_SIDE -> shortSide to longSide
+            RectHeuristic.BEST_LONG_SIDE -> longSide to shortSide
+            RectHeuristic.BEST_AREA -> (free.width * free.height - w * h) to shortSide
+            RectHeuristic.BOTTOM_LEFT -> (free.y + h) to free.x
+        }
+    }
+
     /**
      * Finds the best placement for a rectangle of [rectWidth] x [rectHeight]
      * without committing it. If [allowRotation] is true the 90-degree rotated
      * orientation is tried too. Returns null when it does not fit anywhere.
      */
-    fun findBest(rectWidth: Double, rectHeight: Double, allowRotation: Boolean): Placement? {
-        var bestShortSide = Double.MAX_VALUE
-        var bestLongSide = Double.MAX_VALUE
+    fun findBest(
+        rectWidth: Double,
+        rectHeight: Double,
+        allowRotation: Boolean,
+        heuristic: RectHeuristic = RectHeuristic.BEST_SHORT_SIDE
+    ): Placement? {
+        var best1 = Double.MAX_VALUE
+        var best2 = Double.MAX_VALUE
         var bestRect: Rect? = null
         var bestRotated = false
 
-        for (free in freeRectangles) {
-            // Without rotation.
-            if (rectWidth <= free.width && rectHeight <= free.height) {
-                val leftoverH = free.width - rectWidth
-                val leftoverV = free.height - rectHeight
-                val shortSide = minOf(leftoverH, leftoverV)
-                val longSide = maxOf(leftoverH, leftoverV)
-                if (shortSide < bestShortSide ||
-                    (shortSide == bestShortSide && longSide < bestLongSide)
-                ) {
-                    bestShortSide = shortSide
-                    bestLongSide = longSide
-                    bestRect = Rect(free.x, free.y, rectWidth, rectHeight)
-                    bestRotated = false
-                }
+        fun consider(free: Rect, w: Double, h: Double, rotated: Boolean) {
+            val (s1, s2) = scoreOf(free, w, h, heuristic)
+            if (s1 < best1 || (s1 == best1 && s2 < best2)) {
+                best1 = s1
+                best2 = s2
+                bestRect = Rect(free.x, free.y, w, h)
+                bestRotated = rotated
             }
-            // Rotated 90 degrees.
+        }
+
+        for (free in freeRectangles) {
+            if (rectWidth <= free.width && rectHeight <= free.height) {
+                consider(free, rectWidth, rectHeight, false)
+            }
             if (allowRotation && rectHeight <= free.width && rectWidth <= free.height) {
-                val leftoverH = free.width - rectHeight
-                val leftoverV = free.height - rectWidth
-                val shortSide = minOf(leftoverH, leftoverV)
-                val longSide = maxOf(leftoverH, leftoverV)
-                if (shortSide < bestShortSide ||
-                    (shortSide == bestShortSide && longSide < bestLongSide)
-                ) {
-                    bestShortSide = shortSide
-                    bestLongSide = longSide
-                    bestRect = Rect(free.x, free.y, rectHeight, rectWidth)
-                    bestRotated = true
-                }
+                consider(free, rectHeight, rectWidth, true)
             }
         }
 
         val placed = bestRect ?: return null
-        return Placement(placed, bestRotated, bestShortSide, bestLongSide)
+        return Placement(placed, bestRotated, best1, best2)
     }
 
-    /**
-     * Tries to place a rectangle of [rectWidth] x [rectHeight].
-     * If [allowRotation] is true the 90-degree rotated orientation is tried too.
-     * Returns null when the rectangle does not fit anywhere.
-     */
-    fun insert(rectWidth: Double, rectHeight: Double, allowRotation: Boolean): Placement? {
-        val placement = findBest(rectWidth, rectHeight, allowRotation) ?: return null
+    /** Places a rectangle at the best spot; null when it does not fit. */
+    fun insert(
+        rectWidth: Double,
+        rectHeight: Double,
+        allowRotation: Boolean,
+        heuristic: RectHeuristic = RectHeuristic.BEST_SHORT_SIDE
+    ): Placement? {
+        val placement = findBest(rectWidth, rectHeight, allowRotation, heuristic) ?: return null
         place(placement.rect)
         return placement
     }
@@ -119,22 +155,19 @@ class MaxRectsBin(val width: Double, val height: Double) {
     }
 
     private fun splitFreeRect(free: Rect, placed: Rect) {
-        // Left strip.
-        if (placed.x > free.x && placed.x < free.right) {
+        val eps = Rect.EPS
+        if (placed.x > free.x + eps && placed.x < free.right - eps) {
             freeRectangles.add(Rect(free.x, free.y, placed.x - free.x, free.height))
         }
-        // Right strip.
-        if (placed.right < free.right) {
+        if (placed.right < free.right - eps) {
             freeRectangles.add(
                 Rect(placed.right, free.y, free.right - placed.right, free.height)
             )
         }
-        // Top strip.
-        if (placed.y > free.y && placed.y < free.bottom) {
+        if (placed.y > free.y + eps && placed.y < free.bottom - eps) {
             freeRectangles.add(Rect(free.x, free.y, free.width, placed.y - free.y))
         }
-        // Bottom strip.
-        if (placed.bottom < free.bottom) {
+        if (placed.bottom < free.bottom - eps) {
             freeRectangles.add(
                 Rect(free.x, placed.bottom, free.width, free.bottom - placed.bottom)
             )

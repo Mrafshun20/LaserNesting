@@ -23,8 +23,16 @@ data class SettingsEntity(
     val allowRotation: Boolean = true,
     val cuttingSpeedMmPerMin: Double = 6000.0,
     /**
-     * App language: "system" (follow the device), "en" (English),
-     * or "fa" (Persian). Default follows the device.
+     * App language: "fa" (Persian, the default), "en" (English) or
+     * "system" (follow the device).
      */
-    val language: String = "system"
+    val language: String = "fa",
+    /** Nesting engine: AUTO, TRUE_SHAPE or FAST_BOX (NestMode name). */
+    val nestMode: String = "AUTO",
+    /** Raster cell for true-shape nesting in mm; 0 = automatic. */
+    val precisionMm: Double = 0.0,
+    /** Extra rotation step for DXF parts in degrees; 0 = off. */
+    val rotationStepDeg: Int = 0,
+    /** Time to pierce one contour, in seconds (cut-time estimate). */
+    val pierceTimeSec: Double = 0.5
 )

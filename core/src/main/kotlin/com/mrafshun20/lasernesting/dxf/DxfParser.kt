@@ -1039,20 +1039,29 @@ object DxfParser {
             // Discovery order: loops/polylines/circles in the order found.
             val allParts = ArrayList<OutlineCandidate>()
             val allHoles = ArrayList<List<DxfCircleHole>>()
+            val allCutouts = ArrayList<List<List<DxfPoint>>>()
             for (k in partOutlineIdx.indices) {
                 allParts.add(candidates[partOutlineIdx[k]])
                 allHoles.add(holesByPart[k] ?: emptyList())
+                // Direct inner loops that are not parts themselves are the
+                // part's cutouts (slots, windows, notches): they must be
+                // cut, drawn and subtracted from the area.
+                val cuts = (childrenOf[partOutlineIdx[k]] ?: emptyList())
+                    .filter { it !in partOutlineSet }
+                    .map { candidates[it].points }
+                allCutouts.add(cuts)
             }
             for (i in roundParts.indices) {
                 allParts.add(roundParts[i])
                 allHoles.add(roundPartHoles[i])
+                allCutouts.add(emptyList())
             }
             val order = allParts.indices.sortedBy { allParts[it].order }
             val result = ArrayList<DxfPart>()
             var partNumber = 0
             for (idx in order) {
                 partNumber++
-                result.add(buildPart(allParts[idx], allHoles[idx], partNumber))
+                result.add(buildPart(allParts[idx], allHoles[idx], allCutouts[idx], partNumber))
             }
             return result
         }
@@ -1061,6 +1070,7 @@ object DxfParser {
         private fun buildPart(
             candidate: OutlineCandidate,
             holes: List<DxfCircleHole>,
+            cutouts: List<List<DxfPoint>>,
             partNumber: Int
         ): DxfPart {
             var minX = Double.MAX_VALUE
@@ -1084,7 +1094,8 @@ object DxfParser {
                 holes = normHoles,
                 widthMm = maxX - minX,
                 heightMm = maxY - minY,
-                layer = candidate.layer
+                layer = candidate.layer,
+                cutouts = cutouts.map { loop -> loop.map { DxfPoint(it.x - minX, it.y - minY) } }
             )
         }
 

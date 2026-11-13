@@ -1,3 +1,16 @@
+# iBebels — Laser sheet nesting
+
+True-shape nesting for laser cutting (Bystronic-oriented), for **Windows** and **Android**, Persian by default.
+
+* **Engines**: Auto (best of all), True shape (parts interlock and nest inside holes/cutouts of other parts, optional 15/30/45° rotation), Fast box (MaxRects, several heuristics).
+* **DXF import** keeps outer contours, circular holes **and slots/cutouts** (previously dropped).
+* **Exports**: DXF per sheet (layers SHEET / CUT_OUTER / CUT_INNER / LABELS) for the machine software, HTML job report (print to PDF), CSV cut list, SVG.
+* **Numbers**: cut length, pierce count, estimated cut time, sheet/parts weight, reusable remnant.
+* Windows UI: dark, rounded, Vazirmatn, RTL when Persian. Projects autosave to `~/iBebels`.
+
+Engine self-test (no Gradle needed): see `tools/NestingSelfTest.kt`.
+
+---
 # Laser Nesting
 
 A native Android app (plus a Windows desktop app) for sheet-metal nesting
