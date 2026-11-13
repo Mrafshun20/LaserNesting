@@ -270,14 +270,20 @@ object NestingEngine {
             val angleStep = if (options.rotationStepDeg > 0) options.rotationStepDeg else when (options.quality) {
                 NestQuality.FAST -> 45
                 NestQuality.BALANCED -> 45
-                NestQuality.HIGH -> 15
+                // HIGH also uses coarse main passes: its finer grid (cell
+                // 0.7) and longer budget are what buy density, not fine
+                // angles — measured, 15-degree main passes never beat 45
+                // on the reference job and starved refinement of time.
+                NestQuality.HIGH -> 45
             }
-            // Fine angles are only explored in the refinement restarts below:
-            // trying 36 angles in every main pass is too slow on a phone and
-            // the budget runs out before any layout completes. The main passes
-            // use the coarse step above and finish fast; refinement then spends
-            // the remaining time on the fine step.
-            val refineAngleStep = 10
+            // Refinement rounds use the SAME coarse step as the main passes.
+            // A fine 10-degree round takes longer than the whole remaining
+            // budget (measured: a 45-degree main pass is ~3-4 s, a 36-angle
+            // round ~4x that), so fine rounds never completed and the engine
+            // effectively ran only the four main passes. Coarse rounds finish,
+            // and each one varies the angle family (all / cardinals /
+            // diagonals) instead of only the sort order — sort jitter alone
+            // cannot vary a job whose parts are mostly identical copies.
             val reach = spacing / 2.0 + cell * 0.7072
             val padCells = kotlin.math.ceil(reach / cell).toInt() + 1
             val masks = HashMap<Long, PartMask>()
@@ -310,7 +316,7 @@ object NestingEngine {
                 if (better(a.rank, b.rank)) -1 else if (better(b.rank, a.rank)) 1 else 0
             }!!.rank
             val refineUntil = System.nanoTime() +
-                ((deadline - System.nanoTime()) * 0.7).toLong()
+                ((deadline - System.nanoTime()) * 0.9).toLong()
             val rnd = java.util.Random(12345L)
             var sinceImprovement = 0
             var round = 0
@@ -332,13 +338,23 @@ object NestingEngine {
                     val a = it.part.widthMm * it.part.heightMm
                     jitter[it] = a * (1.0 + spread * (rnd.nextDouble() * 2.0 - 1.0))
                 }
+                // A quarter of rounds nest small parts first: a genuinely
+                // different layout family from the usual large-first order,
+                // which sort jitter alone never produces.
+                val smallFirst = rnd.nextDouble() < 0.25
                 val order = base.sortedWith(
                     compareByDescending<RasterNester.Item> { it.part.priority }
-                        .thenByDescending { jitter[it] ?: 0.0 }
+                        .thenByDescending { if (smallFirst) -(jitter[it] ?: 0.0) else (jitter[it] ?: 0.0) }
                 )
+                val subsetRoll = rnd.nextDouble()
+                val angleSubset = when {
+                    subsetRoll < 0.25 -> null
+                    subsetRoll < 0.625 -> listOf(0, 90, 180, 270)
+                    else -> listOf(45, 135, 225, 315)
+                }
                 val layout = RasterNester.run(
                     order, usableW, usableH, margin, count, cell, padCells, reach,
-                    allowRotationGlobal, scores[rnd.nextInt(scores.size)], masks, deadline, refineAngleStep
+                    allowRotationGlobal, scores[rnd.nextInt(scores.size)], masks, deadline, angleStep, angleSubset
                 ) ?: break
                 addCandidate("raster-refine-$round", layout)
                 if (better(bestRank(), before)) sinceImprovement = 0 else sinceImprovement++

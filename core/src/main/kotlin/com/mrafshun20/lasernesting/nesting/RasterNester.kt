@@ -361,7 +361,8 @@ internal object RasterNester {
         score: RasterScore,
         masks: HashMap<Long, PartMask>,
         deadlineNanos: Long,
-        angleStep: Int = 45
+        angleStep: Int = 45,
+        angleSubset: List<Int>? = null
     ): Layout? {
         val cols = ceil(usableW / cell).toInt() + 2 * padCells + 3
         val rows = ceil(usableH / cell).toInt() + 2 * padCells + 3
@@ -372,7 +373,7 @@ internal object RasterNester {
         for (item in items) {
             if (System.nanoTime() > deadlineNanos) return null
             val part = item.part
-            val angles = distinctAngles(part, allowRotationGlobal, angleStep)
+            val angles = distinctAngles(part, allowRotationGlobal, angleStep, angleSubset)
             var done = false
             for (si in 0 until sheetCount) {
                 var bestScore = Double.MAX_VALUE
@@ -429,8 +430,27 @@ internal object RasterNester {
      * tried; outlines with unrestricted rotation try every [angleStep]
      * degrees, so diagonal interlocking at 15/10 degrees is possible.
      */
-    fun distinctAngles(part: PartInput, allowRotationGlobal: Boolean, angleStep: Int = 45): List<Int> {
+    fun distinctAngles(
+        part: PartInput,
+        allowRotationGlobal: Boolean,
+        angleStep: Int = 45,
+        angleSubset: List<Int>? = null
+    ): List<Int> {
         val angles = NestingEngine.allowedAngles(part, allowRotationGlobal)
+        if (angleSubset != null) {
+            // A refinement round restricted to one angle family (cardinals or
+            // diagonals): genuinely different layouts from the same greedy
+            // pass, which sort-order jitter alone cannot produce when many
+            // parts are identical.
+            val order = listOf(0, 45, 90, 135, 180, 225, 270, 315)
+            val sub = order.filter { it in angleSubset && it in angles }
+            if (sub.isEmpty()) return angles
+            return when {
+                part.shape == PartShape.CIRCLE -> listOf(angles.first())
+                part.shape == PartShape.DXF -> sub
+                else -> sub.distinctBy { it % 180 }
+            }
+        }
         return when {
             part.shape == PartShape.CIRCLE -> listOf(angles.first())
             part.shape == PartShape.DXF && part.outline != null -> {
