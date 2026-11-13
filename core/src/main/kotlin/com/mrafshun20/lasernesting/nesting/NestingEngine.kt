@@ -269,9 +269,15 @@ object NestingEngine {
             val deadline = System.nanoTime() + (options.quality.seconds * 1e9).toLong()
             val angleStep = if (options.rotationStepDeg > 0) options.rotationStepDeg else when (options.quality) {
                 NestQuality.FAST -> 45
-                NestQuality.BALANCED -> 15
-                NestQuality.HIGH -> 10
+                NestQuality.BALANCED -> 45
+                NestQuality.HIGH -> 15
             }
+            // Fine angles are only explored in the refinement restarts below:
+            // trying 36 angles in every main pass is too slow on a phone and
+            // the budget runs out before any layout completes. The main passes
+            // use the coarse step above and finish fast; refinement then spends
+            // the remaining time on the fine step.
+            val refineAngleStep = 10
             val reach = spacing / 2.0 + cell * 0.7072
             val padCells = kotlin.math.ceil(reach / cell).toInt() + 1
             val masks = HashMap<Long, PartMask>()
@@ -332,7 +338,7 @@ object NestingEngine {
                 )
                 val layout = RasterNester.run(
                     order, usableW, usableH, margin, count, cell, padCells, reach,
-                    allowRotationGlobal, scores[rnd.nextInt(scores.size)], masks, deadline, angleStep
+                    allowRotationGlobal, scores[rnd.nextInt(scores.size)], masks, deadline, refineAngleStep
                 ) ?: break
                 addCandidate("raster-refine-$round", layout)
                 if (better(bestRank(), before)) sinceImprovement = 0 else sinceImprovement++

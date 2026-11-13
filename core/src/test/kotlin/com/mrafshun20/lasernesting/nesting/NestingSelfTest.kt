@@ -234,7 +234,7 @@ fun main() {
         polyPart(1, "Bracket", bracketPts, emptyList(), 28),
         polyPart(2, "U", uPts, emptyList(), 20)
     )
-    val refOpts = NestOptions(rotationStepDeg = 10)
+    val refOpts = NestOptions()
     val tRef = System.nanoTime()
     val refRes = NestingEngine.nest(refJob, 2000.0, 1000.0, 1, 0.2, 3.0, 10.0, true, 0.0, refOpts)
     val refMs = (System.nanoTime() - tRef) / 1e6
