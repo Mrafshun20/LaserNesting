@@ -605,6 +605,13 @@ object NestingEngine {
         }
     }
 
+    /** Pierces for one placed part: outer contour + one per hole/cutout. */
+    fun partPierces(part: PlacedPart): Int {
+        if (part.shape != PartShape.DXF) return 1
+        val outline = part.outline ?: return 1
+        return 1 + outline.holes.size + outline.cutouts.size
+    }
+
     private fun baseSize(part: PlacedPart): Pair<Double, Double> {
         val outline = part.outline
         if (outline != null) return Pair(outline.widthMm, outline.heightMm)

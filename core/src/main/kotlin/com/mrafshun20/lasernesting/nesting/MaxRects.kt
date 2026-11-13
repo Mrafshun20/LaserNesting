@@ -12,11 +12,22 @@ data class Rect(
     val right: Double get() = x + width
     val bottom: Double get() = y + height
 
+    /**
+     * Overlap test with a tolerance: rectangles that merely touch, or that
+     * overlap by less than [EPS] because of floating-point rounding, do not
+     * intersect. Without it a one-ulp sliver can re-split forever (hang).
+     */
     fun intersects(other: Rect): Boolean =
-        x < other.right && right > other.x && y < other.bottom && bottom > other.y
+        x < other.right - EPS && right - EPS > other.x &&
+            y < other.bottom - EPS && bottom - EPS > other.y
 
     fun contains(other: Rect): Boolean =
-        x <= other.x && y <= other.y && right >= other.right && bottom >= other.bottom
+        x <= other.x + EPS && y <= other.y + EPS &&
+            right >= other.right - EPS && bottom >= other.bottom - EPS
+
+    companion object {
+        const val EPS = 1e-6
+    }
 }
 
 /**

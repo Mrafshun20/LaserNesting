@@ -18,7 +18,7 @@ object ExportCore {
     /** CSV cut list: one row per placed part, across all sheets. */
     fun cutListCsv(result: NestResult, sheetWidthMm: Double, sheetLengthMm: Double): String {
         val sb = StringBuilder()
-        sb.append("Part,Sheet,X (mm),Y (mm),Width (mm),Height (mm),Rotation (deg),Shape,Area (mm2)\n")
+        sb.append("Part,Sheet,X (mm),Y (mm),Width (mm),Height (mm),Rotation (deg),Shape,Area (mm2),Cut length (mm),Pierces\n")
         for (sheet in result.sheets) {
             for (part in sheet.placed) {
                 sb.append(escapeCsv(part.name)).append(',')
@@ -36,6 +36,8 @@ object ExportCore {
                     }
                 )
                 sb.append(',').append(formatNumber(com.mrafshun20.lasernesting.nesting.NestingEngine.partArea(part)))
+                sb.append(',').append(formatNumber(com.mrafshun20.lasernesting.nesting.NestingEngine.partPerimeter(part)))
+                sb.append(',').append(com.mrafshun20.lasernesting.nesting.NestingEngine.partPierces(part))
                 sb.append('\n')
             }
         }
@@ -73,7 +75,7 @@ object ExportCore {
             )
             sb.append('\n')
             sb.append(
-                """<text x="20" y="${formatNumber(offsetY + 48)}" font-size="32" fill="#333333">Sheet ${sheet.index + 1} - ${"%.1f".format(sheet.utilizationPercent)}% used</text>"""
+                """<text x="20" y="${formatNumber(offsetY + 48)}" font-size="32" fill="#333333">Sheet ${sheet.index + 1} - ${com.mrafshun20.lasernesting.util.Fmt.f(sheet.utilizationPercent, 1)}% used</text>"""
             )
             sb.append('\n')
             for (part in sheet.placed) {
@@ -253,10 +255,6 @@ object ExportCore {
     }
 
     private fun formatNumber(value: Double): String {
-        return if (value == value.toLong().toDouble()) {
-            value.toLong().toString()
-        } else {
-            "%.2f".format(value)
-        }
+        return com.mrafshun20.lasernesting.util.Fmt.num(value)
     }
 }
