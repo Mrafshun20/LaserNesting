@@ -120,8 +120,8 @@ data class NestResult(
 /** How hard the nester works. */
 enum class NestQuality(val cellFactor: Double, val seconds: Double) {
     FAST(1.8, 6.0),
-    BALANCED(1.0, 15.0),
-    HIGH(0.7, 40.0)
+    BALANCED(1.0, 30.0),
+    HIGH(0.7, 60.0)
 }
 
 /** Optional settings for a nesting run. */
