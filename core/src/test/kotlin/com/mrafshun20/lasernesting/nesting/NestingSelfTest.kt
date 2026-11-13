@@ -224,5 +224,24 @@ fun main() {
     val usedDiag = diagRes.sheets.flatMap { it.placed }.any { it.rotationDegrees == 45 || it.rotationDegrees == 135 || it.rotationDegrees == 225 || it.rotationDegrees == 315 }
     println("  -> diagonal used: $usedDiag, placed ${diagRes.totalPartsPlaced}")
     check(usedDiag) { "nester should place some parts at a diagonal angle" }
+    // 13) Reference-photo job: 28 brackets + 20 U-channels on one 2000x1000
+    // sheet, exactly the job the user tests in the app. Diagnostic only:
+    // it prints utilisation + placed count but does not fail the suite, so a
+    // density regression is visible in CI without blocking the build.
+    val bracketPts = listOf(Point(0.0, 134.35), Point(14.58, 112.73), Point(36.84, 95.92), Point(72.09, 86.85), Point(80.43, 66.67), Point(109.56, 17.02), Point(113.55, 2.32), Point(176.64, 0.0), Point(173.72, 11.73), Point(141.19, 68.88), Point(138.74, 78.42), Point(174.02, 75.76), Point(180.29, 80.73), Point(316.75, 72.75), Point(319.99, 63.84), Point(328.05, 84.26), Point(334.94, 88.44), Point(343.04, 84.66), Point(348.41, 63.39), Point(352.62, 62.9), Point(358.2, 154.08), Point(356.1, 172.83), Point(353.13, 171.75), Point(348.37, 155.22), Point(339.91, 149.79), Point(334.29, 150.45), Point(328.7, 157.5), Point(324.87, 173.6), Point(321.9, 172.52), Point(321.25, 166.91), Point(233.66, 172.78), Point(182.6, 174.42), Point(180.9, 178.18), Point(143.26, 178.98), Point(143.29, 185.38), Point(183.87, 246.88), Point(183.44, 255.47), Point(123.33, 258.87), Point(115.6, 241.26), Point(78.15, 182.25), Point(32.81, 171.84), Point(11.65, 155.07), Point(1.6, 142.0))
+    val uPts = listOf(Point(0.0, 0.0), Point(0.0, 97.0), Point(110.0, 97.0), Point(110.0, 0.0), Point(89.0, 0.0), Point(89.0, 76.0), Point(21.0, 76.0), Point(21.0, 0.0))
+    val refJob = listOf(
+        polyPart(1, "Bracket", bracketPts, emptyList(), 28),
+        polyPart(2, "U", uPts, emptyList(), 20)
+    )
+    val refOpts = NestOptions(rotationStepDeg = 10)
+    val tRef = System.nanoTime()
+    val refRes = NestingEngine.nest(refJob, 2000.0, 1000.0, 1, 0.2, 3.0, 10.0, true, 0.0, refOpts)
+    val refMs = (System.nanoTime() - tRef) / 1e6
+    val refErrs = validate(refRes, 2000.0, 1000.0, 10.0, 3.2)
+    println("REF-JOB 2000x1000 10deg: placed %d/%d util %.1f%% %s %.0f ms %s".format(
+        refRes.totalPartsPlaced, refRes.totalPartsRequested, refRes.overallUtilizationPercent,
+        refRes.strategy, refMs, if (refErrs.isEmpty()) "VALID" else "INVALID: ${refErrs.take(3)}"))
+    check(refErrs.isEmpty()) { "ref-job: ${refErrs.take(5)}" }
     println("ALL NESTING CHECKS PASSED")
 }
